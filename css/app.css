@@ -152,6 +152,19 @@ body::before { display: none; }
 .props td { color: var(--text-2); padding: 5px 0; }
 .mutxt { color: var(--muted); }
 
+/* flashcards (notas de repaso tipo Obsidian) */
+.md .deck-tag { display: inline-flex; align-items: center; gap: 7px; margin: 0 0 14px; padding: 5px 11px; border: 1px solid var(--line); border-radius: 999px; background: var(--panel-2, #11150f); color: var(--text-2); font-size: 13px; }
+.md .deck-tag code { color: var(--accent); background: none; font: 600 12px/1 var(--mono); }
+.fc-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 10px; margin: 16px 0; }
+.fc { position: relative; text-align: left; min-height: 78px; padding: 13px 15px 32px; border: 1px solid var(--line); border-radius: 10px; background: var(--panel-2, #11150f); color: var(--text); cursor: pointer; font: inherit; transition: border-color .15s, background .15s; display: block; width: 100%; }
+.fc:hover { border-color: var(--accent); }
+.fc__q { display: block; font-weight: 600; line-height: 1.35; }
+.fc__a { display: block; margin-top: 9px; color: var(--accent); font: 600 14px/1.35 var(--mono); max-height: 0; opacity: 0; overflow: hidden; transition: max-height .18s, opacity .18s, margin .18s; }
+.fc.on { background: #0e120c; }
+.fc.on .fc__a { max-height: 200px; opacity: 1; }
+.fc::after { content: "mostrar ▾"; position: absolute; left: 15px; bottom: 10px; font: 600 10px/1 var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.fc.on::after { content: "ocultar ▴"; color: var(--accent); }
+
 .embargo-card { border: 1px dashed var(--crit); background: #ff3b6b0d; border-radius: 10px; padding: 16px; margin-top: 16px; }
 .embargo-card b { color: var(--crit); font: 700 11px/1 var(--mono); letter-spacing: .1em; }
 .embargo-card p { color: var(--text-2); margin: 8px 0 0; font-size: 13.5px; }

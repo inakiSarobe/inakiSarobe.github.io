@@ -43,7 +43,7 @@
       const t = noteType(n);
       if (t === "maquina") return "#/htb/" + slug(n.id);
       if (t === "vulnerabilidad") return "#/vuln/" + slug(n.id);
-      return "#/notas/" + encodeURIComponent(n.id);
+      return "#/notas/" + slug(n.id);
     }
     if (machineNames.has(slug(name))) return "#/htb/" + slug(name);
     return null;
@@ -60,6 +60,20 @@
       let x = chunk.replace(/%%[\s\S]*?%%/g, "");
       x = x.replace(/!\[\[([^\]|]+)(?:\|[^\]]*)?\]\]/g, (_, t) =>
         IMG.test(t) ? `<img src="vault/assets/${encodeURIComponent(t.trim())}" alt="${esc(t)}" loading="lazy">` : t.trim());
+      // Tag de mazo de Obsidian (#flashcards/...) -> chip
+      x = x.replace(/^#(flashcards[\w/\-]*)[ \t]*$/gim, (_, tag) =>
+        `<p class="deck-tag">🂠 Mazo de repaso · <code>#${esc(tag)}</code></p>\n`);
+      // Flashcards Obsidian "pregunta::respuesta" -> tarjetas que se dan vuelta
+      x = x.replace(/(?:^|\n)((?:[^\n]*::[^\n]*(?:\n|$))+)/g, (block) => {
+        const lines = block.trim().split(/\n/).filter((l) => l.includes("::"));
+        if (!lines.length) return block;
+        const cards = lines.map((l) => {
+          const i = l.indexOf("::");
+          const q = l.slice(0, i).trim(), a = l.slice(i + 2).trim();
+          return `<button class="fc" type="button" aria-label="Mostrar respuesta"><span class="fc__q">${esc(q)}</span><span class="fc__a">${esc(a)}</span></button>`;
+        }).join("");
+        return `\n\n<div class="fc-grid">${cards}</div>\n\n`;
+      });
       x = x.replace(/\[\[([^\]|#]+)(?:#[^\]|]*)?(?:\|([^\]]+))?\]\]/g, (_, t, a) => {
         const r = routeForName(t.trim()); const label = esc((a || t).trim());
         return r ? `<a href="${r}">${label}</a>` : `<span class="mutxt">${label}</span>`;
@@ -273,7 +287,7 @@
   /* ---- Notas ---- */
   Views.notas = (id) => {
     if (id) {
-      const n = byId.get(decodeURIComponent(id).toLowerCase());
+      const n = noteList.find((x) => slug(x.id) === id) || byId.get(decodeURIComponent(id).toLowerCase());
       if (!n) return notFound();
       return `<nav class="crumbs"><a href="#/notas">Notas</a> / <span>${esc(n.title)}</span></nav>
         <h1 class="vhead">${esc(n.title)}</h1>${propsTable(n)}<div class="md">${renderMd(n.body)}</div>`;
@@ -291,7 +305,7 @@
     </div></div>
     ${keys.map((k) => `<div class="ncat"><div class="ncat__h">${esc(k.replace(/^\d+\s+/, ""))}<span>${groups.get(k).length}</span></div>
       <div class="cards">${groups.get(k).sort((a, b) => a.title.localeCompare(b.title, "es")).map((n) => {
-        const t = noteType(n); const r = t === "maquina" ? "#/htb/" + slug(n.id) : t === "vulnerabilidad" ? "#/vuln/" + slug(n.id) : "#/notas/" + encodeURIComponent(n.id);
+        const t = noteType(n); const r = t === "maquina" ? "#/htb/" + slug(n.id) : t === "vulnerabilidad" ? "#/vuln/" + slug(n.id) : "#/notas/" + slug(n.id);
         return `<a class="card card--sm" href="${r}"><b>${esc(n.title)}</b>${n.embargo ? `<span class="badge warn">embargada</span>` : ""}</a>`;
       }).join("")}</div></div>`).join("")}`;
   };
@@ -377,6 +391,7 @@
     const items = SECTIONS.map((s) => ({ label: s.label, hint: "sección", route: "#/" + s.id }));
     (P.htb && P.htb.machines || []).forEach((m) => items.push({ label: m.name, hint: "CTF", route: "#/htb/" + slug(m.name) }));
     vulnNotes().forEach((n) => items.push({ label: n.id, hint: "CVE", route: "#/vuln/" + slug(n.id) }));
+    noteList.forEach((n) => { const t = noteType(n); if (t !== "maquina" && t !== "vulnerabilidad") items.push({ label: n.title, hint: "nota", route: "#/notas/" + slug(n.id) }); });
     (P.projects || []).forEach((p) => items.push({ label: p.name, hint: "proyecto", route: "#/proyectos/" + slug(p.name) }));
     items.push({ label: "Descargar CV", hint: "archivo", route: (P.links || {}).cvEs, dl: true });
     return items;
@@ -481,7 +496,9 @@
   }
   function showLb(i) { if (!lbList.length) return; lbIdx = (i + lbList.length) % lbList.length; const s = lbList[lbIdx]; lbImg.src = s.currentSrc || s.src; lbCap.textContent = (lbIdx + 1) + " / " + lbList.length; const multi = lbList.length > 1; lb.querySelector(".lb-prev").style.display = lb.querySelector(".lb-next").style.display = multi ? "" : "none"; }
   function closeLb() { if (lb) { lb.hidden = true; document.body.classList.remove("lb-open"); lbImg.src = ""; } }
-  view.addEventListener("click", (e) => { const img = e.target.closest(".md img"); if (!img) return; ensureLb(); lbList = [...view.querySelectorAll(".md img")]; showLb(Math.max(0, lbList.indexOf(img))); lb.hidden = false; document.body.classList.add("lb-open"); });
+  view.addEventListener("click", (e) => {
+    const fc = e.target.closest(".fc"); if (fc) { fc.classList.toggle("on"); return; }
+    const img = e.target.closest(".md img"); if (!img) return; ensureLb(); lbList = [...view.querySelectorAll(".md img")]; showLb(Math.max(0, lbList.indexOf(img))); lb.hidden = false; document.body.classList.add("lb-open"); });
 
   /* ============ init ============ */
   buildSidebar();

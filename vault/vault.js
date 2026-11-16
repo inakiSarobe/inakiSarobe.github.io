@@ -1,8 +1,30 @@
 /* Generado por tools/sync_vault.py — no editar a mano */
 window.VAULT = {
- "generated": "2026-11-16T17:29:33+00:00",
+ "generated": "2026-11-16T17:33:24+00:00",
  "vaultName": "Cybersecurity",
  "notes": [
+  {
+   "id": "Puertos comunes",
+   "title": "Puertos comunes",
+   "path": "01 Conceptos/Puertos comunes.md",
+   "folder": "01 Conceptos",
+   "props": {
+    "tipo": "concepto",
+    "area": "redes",
+    "estado": "repasando",
+    "tags": [
+     "concepto"
+    ]
+   },
+   "tags": [
+    "concepto",
+    "flashcards/redes"
+   ],
+   "links": [],
+   "embargo": false,
+   "body": "#flashcards/redes\n\nPuertos por defecto que vas a ver en casi cualquier escaneo con nmap. Repasalos con `Ctrl+P` → *Spaced Repetition: Review flashcards*.\n\n¿Puerto por defecto de FTP?::21/tcp\n¿Puerto por defecto de SSH?::22/tcp\n¿Puerto por defecto de Telnet?::23/tcp\n¿Puerto por defecto de SMTP?::25/tcp\n¿Puerto por defecto de DNS?::53 (UDP, y TCP para transferencias de zona)\n¿Puerto por defecto de HTTP?::80/tcp\n¿Puerto por defecto de Kerberos?::88\n¿Puerto por defecto de POP3?::110/tcp\n¿Puertos de NetBIOS / RPC en Windows?::135 (RPC), 137-139 (NetBIOS)\n¿Puerto por defecto de LDAP?::389 (636 para LDAPS)\n¿Puerto por defecto de HTTPS?::443/tcp\n¿Puerto por defecto de SMB?::445/tcp\n¿Puerto por defecto de MySQL?::3306/tcp\n¿Puerto por defecto de RDP?::3389/tcp\n¿Puerto por defecto de PostgreSQL?::5432/tcp\n¿Puertos de WinRM?::5985 (HTTP) y 5986 (HTTPS)\n",
+   "mtime": "2026-11-16T17:33:21.667512+00:00"
+  },
   {
    "id": "DoubleTake",
    "title": "DoubleTake",
