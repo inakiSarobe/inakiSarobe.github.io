@@ -21,6 +21,18 @@ window.PROFILE = {
   },
   githubUser: "inakiSarobe",
 
+  /* ---------- "Trabajando ahora" (editá libremente) ---------- */
+  now: {
+    label: "Trabajando ahora",
+    updated: "nov 2026",
+    items: [
+      "HackTheBox: <b>DoubleTake</b> → root (cadena de 2 CVEs)",
+      "<b>Bug bounty</b> en programas públicos",
+      "LINSI (UTN): herramienta de <b>pentesting automatizado</b>",
+      "<b>CyberWar</b> / <b>morocho.ai</b> — Red Team con IA"
+    ]
+  },
+
   /*
    * Informes técnicos (repo Informes-Tecnicos). La lista completa se lee en vivo desde GitHub:
    * cuando subas un informe nuevo aparece solo en el Anexo C y en el contador.

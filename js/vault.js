@@ -39,6 +39,12 @@
 
   /* ---------- Construcción del grafo ---------- */
   const byName = new Map(V.notes.map((n) => [n.id.toLowerCase(), n]));
+  // Backlinks: para cada nota, qué otras notas la enlazan (wikilinks entrantes).
+  const backlinks = new Map();
+  V.notes.forEach((n) => (n.links || []).forEach((t) => {
+    const k = t.toLowerCase();
+    (backlinks.get(k) || backlinks.set(k, []).get(k)).push(n.id);
+  }));
   const nodes = [], edges = [], index = new Map();
   const addNode = (id, label, type, note) => {
     if (index.has(id)) return index.get(id);
@@ -243,6 +249,12 @@
       html += window.marked.parse(preprocess(n.body), { gfm: true });
     } else {
       html += `<pre>${esc(n.body)}</pre>`;
+    }
+    const bl = [...new Set(backlinks.get(n.id.toLowerCase()) || [])].filter((id) => id.toLowerCase() !== n.id.toLowerCase());
+    if (bl.length) {
+      html += `<div class="backlinks"><h4>Enlazan a esta nota <span>${bl.length}</span></h4><div class="backlinks__items">` +
+        bl.map((id) => { const m = byName.get(id.toLowerCase()); return m ? `<a class="wl bl-chip" data-note="${esc(m.id)}" href="#nota/${encodeURIComponent(m.id)}">${esc(m.title)}</a>` : ""; }).join("") +
+        `</div></div>`;
     }
     reader.innerHTML = html;
     postprocess(reader);

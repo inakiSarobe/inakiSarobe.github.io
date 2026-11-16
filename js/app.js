@@ -375,8 +375,17 @@ ${h.machines.map((m) => `  ${m.status === "owned" ? '<span class="c">[pwned]</sp
     console.log("%cMandámela por mail con el asunto \"flag\" y te debo un café ☕ → " + P.email, "color:#b4bfb8");
   }
 
+  /* ================= §1 "Trabajando ahora" ================= */
+  function renderNow() {
+    const n = P.now, box = $("#now");
+    if (!n || !box) return;
+    box.innerHTML = `<div class="now__head"><span class="now__dot" aria-hidden="true"></span>${esc(n.label)}${n.updated ? ` <span class="now__date">· ${esc(n.updated)}</span>` : ""}</div>
+      <ul class="now__list">${n.items.map((it) => `<li>${it}</li>`).join("")}</ul>`;
+  }
+
   /* ================= init ================= */
   document.getElementById("report-date").textContent = P.reportDate;
+  renderNow();
   renderFindings();
   renderTimeline();
   renderArsenal();
