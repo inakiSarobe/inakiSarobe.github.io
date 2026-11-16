@@ -1,6 +1,6 @@
 /* Generado por tools/sync_vault.py — no editar a mano */
 window.VAULT = {
- "generated": "2026-11-16T00:53:08+00:00",
+ "generated": "2026-11-16T17:29:33+00:00",
  "vaultName": "Cybersecurity",
  "notes": [
   {
@@ -102,28 +102,6 @@ window.VAULT = {
    "embargo": false,
    "body": "## Descripción\nVulnerabilidad en la autenticación por contraseña de `sshd` en sistemas **Alpine Linux**, donde OpenSSH usa **musl libc** en lugar de glibc. Vista en la máquina [[DoubleTake]] (HackTheBox) como vector de acceso inicial.\n\n> [!warning] Por verificar\n> No encontré todavía un aviso público (NVD, Alpine o musl) para este CVE. Completar severidad, CVSS, CWE y versiones afectadas cuando se confirme.\n\n## Causa raíz\n- En Alpine, `crypt()` lo implementa musl, que maneja los hashes de `/etc/shadow` (`$5$` SHA-256, `$6$` SHA-512, con salt).\n- El problema está en cómo sshd/PAM se comporta con la búsqueda del salt y las comparaciones de contraseñas.\n- \n\n## Impacto\n- Acceso inicial por SSH a un usuario del sistema (en DoubleTake, `alpine`).\n- \n\n## Cómo se explota\nVer la sección *3. Explotación* de [[DoubleTake]].\n```http\n\n```\n\n## Cómo se detecta\n- Revisar los logs de autenticación de sshd (`/var/log/messages` o `/var/log/auth.log`) buscando fallos repetidos o intentos con entradas anómalas para un mismo usuario.\n- Comprobar la versión de los paquetes `musl` y `openssh` instalados (`apk info -v musl openssh`).\n\n## Mitigación\n- Actualizar `musl` y `openssh` a las versiones corregidas (`apk upgrade`).\n- Desactivar la autenticación por contraseña y usar solo claves (`PasswordAuthentication no` en `sshd_config`).\n- Limitar intentos con `MaxAuthTries` y herramientas como fail2ban.\n\n## Laboratorio / práctica\n- [[DoubleTake]] (HackTheBox), acceso inicial.\n\n## Referencias\n- Informe técnico en el repo Informes-Tecnicos (en preparación).\n-\n",
    "mtime": "2026-11-15T18:52:42.793078+00:00"
-  },
-  {
-   "id": "Puertos comunes",
-   "title": "Puertos comunes",
-   "path": "01 Conceptos/Puertos comunes.md",
-   "folder": "01 Conceptos",
-   "props": {
-    "tipo": "concepto",
-    "area": "redes",
-    "estado": "repasando",
-    "tags": [
-     "concepto"
-    ]
-   },
-   "tags": [
-    "concepto",
-    "flashcards/redes"
-   ],
-   "links": [],
-   "embargo": false,
-   "body": "#flashcards/redes\n\nPuertos por defecto que vas a ver en casi cualquier escaneo con nmap. Repasalos con `Ctrl+P` → *Spaced Repetition: Review flashcards*.\n\n¿Puerto por defecto de FTP?::21/tcp\n¿Puerto por defecto de SSH?::22/tcp\n¿Puerto por defecto de Telnet?::23/tcp\n¿Puerto por defecto de SMTP?::25/tcp\n¿Puerto por defecto de DNS?::53 (UDP, y TCP para transferencias de zona)\n¿Puerto por defecto de HTTP?::80/tcp\n¿Puerto por defecto de Kerberos?::88\n¿Puerto por defecto de POP3?::110/tcp\n¿Puertos de NetBIOS / RPC en Windows?::135 (RPC), 137-139 (NetBIOS)\n¿Puerto por defecto de LDAP?::389 (636 para LDAPS)\n¿Puerto por defecto de HTTPS?::443/tcp\n¿Puerto por defecto de SMB?::445/tcp\n¿Puerto por defecto de MySQL?::3306/tcp\n¿Puerto por defecto de RDP?::3389/tcp\n¿Puerto por defecto de PostgreSQL?::5432/tcp\n¿Puertos de WinRM?::5985 (HTTP) y 5986 (HTTPS)\n",
-   "mtime": "2026-11-13T20:11:20.643439+00:00"
   }
  ],
  "assets": [
