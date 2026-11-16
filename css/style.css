@@ -346,7 +346,19 @@ body.lb-open { overflow: hidden; }
 .note-path { font: 12px/1 var(--mono); color: var(--muted); }
 .embargo-card { border: 1px dashed var(--crit); border-radius: 10px; padding: 18px; margin-top: 14px; background: repeating-linear-gradient(-45deg, #ff3b6b0a 0 10px, transparent 10px 20px); }
 .embargo-card b { color: var(--crit); }
-.vault__list { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+.vault__browser { margin-top: 16px; }
+.vault__search { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+.vault__search-ico { color: var(--muted); font-size: 18px; line-height: 1; }
+.vault__search input { flex: 1; min-width: 0; font: 13px/1.2 var(--mono); color: var(--text); background: var(--bg-2); border: 1px solid var(--line-2); border-radius: 8px; padding: 10px 12px; }
+.vault__search input:focus { outline: none; border-color: var(--accent); }
+.vault__search input::placeholder { color: var(--muted); }
+#vault-count { font: 11.5px/1 var(--mono); color: var(--muted); white-space: nowrap; }
+.vault__list { margin-top: 0; }
+.vcat { margin: 0 0 16px; }
+.vcat__head { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; font: 600 11px/1 var(--mono); text-transform: uppercase; letter-spacing: .1em; color: var(--muted); border-bottom: 1px solid var(--line); padding-bottom: 6px; margin-bottom: 9px; }
+.vcat__head span { color: var(--accent); }
+.vcat__items { display: flex; flex-wrap: wrap; gap: 8px; }
+.vcat__empty { color: var(--muted); font-size: 13px; padding: 6px 2px; }
 .vault__list button { font: 12.5px/1 var(--mono); background: var(--panel); color: var(--text-2); border: 1px solid var(--line-2); border-radius: 6px; padding: 8px 10px; cursor: pointer; }
 .vault__list button:hover, .vault__list button.on { border-color: #b39dff; color: #fff; }
 .vault__list button i { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; }
@@ -435,7 +447,7 @@ body.lb-open { overflow: hidden; }
 @media print {
   :root { --bg: #fff; --panel: #fff; --panel-2: #fff; --bg-2: #f6f6f3; --text: #111; --text-2: #222; --muted: #555; --line: #ccc; --line-2: #bbb; --accent: #3b7a00; }
   body { background: #fff; color: #111; font-size: 11pt; }
-  body::before, .runhead, .term, .vault__graph, .vault__list, .stamp, .foot, .remed__actions .btn--ghost, .tldr__cta { display: none !important; }
+  body::before, .runhead, .term, .vault__graph, .vault__browser, .stamp, .foot, .remed__actions .btn--ghost, .tldr__cta { display: none !important; }
   .cover { grid-template-columns: 1fr; min-height: 0; }
   .sec { page-break-inside: avoid; border-top: 1px solid #ccc; }
   .finding { break-inside: avoid; }

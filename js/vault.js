@@ -298,9 +298,32 @@
     else if (e.key === "ArrowRight") lbShow(lbIdx + 1);
   });
 
-  /* ---------- Lista de notas (accesible sin canvas) ---------- */
-  $("#vault-list").innerHTML = V.notes.map((n) => `<button type="button" data-id="${esc(n.id)}"><i style="background:${n.embargo ? "#ff3b6b" : TYPES[noteType(n)].c}"></i>${esc(n.title)}</button>`).join("");
-  $("#vault-list").addEventListener("click", (e) => { const b = e.target.closest("button"); if (b) openNote(b.dataset.id); });
+  /* ---------- Lista de notas por categoría + buscador ---------- */
+  const listEl = $("#vault-list"), qInput = $("#vault-q"), countEl = $("#vault-count");
+  const catKey = (n) => (String(n.folder || "").split("/")[0] || "zzz Otros");
+  const catLabel = (k) => k.replace(/^\d+\s+/, "") || "Otros";
+  const noteBtn = (n) => `<button type="button" data-id="${esc(n.id)}"><i style="background:${n.embargo ? "#ff3b6b" : TYPES[noteType(n)].c}"></i>${esc(n.title)}</button>`;
+  const haystack = (n) => `${n.title} ${n.body || ""} ${(n.tags || []).join(" ")} ${Object.values(n.props || {}).join(" ")}`.toLowerCase();
+
+  function renderList(q) {
+    q = (q || "").trim().toLowerCase();
+    const shown = q ? V.notes.filter((n) => haystack(n).includes(q)) : V.notes.slice();
+    const groups = new Map();
+    shown.forEach((n) => { const k = catKey(n); (groups.get(k) || groups.set(k, []).get(k)).push(n); });
+    const keys = [...groups.keys()].sort();
+    listEl.innerHTML = keys.length ? keys.map((k) => {
+      const notes = groups.get(k).sort((a, b) => a.title.localeCompare(b.title, "es"));
+      return `<div class="vcat"><div class="vcat__head">${esc(catLabel(k))}<span>${notes.length}</span></div>
+        <div class="vcat__items">${notes.map(noteBtn).join("")}</div></div>`;
+    }).join("") : `<p class="vcat__empty mono">Sin resultados para “${esc(q)}”.</p>`;
+    const cur = selected && selected.note ? selected.note.id : null;
+    if (cur) listEl.querySelectorAll("button").forEach((b) => b.classList.toggle("on", b.dataset.id === cur));
+    countEl.textContent = q ? `${shown.length}/${V.notes.length}` : `${V.notes.length} nota${V.notes.length === 1 ? "" : "s"}`;
+  }
+
+  renderList("");
+  if (qInput) qInput.addEventListener("input", () => renderList(qInput.value));
+  listEl.addEventListener("click", (e) => { const b = e.target.closest("button"); if (b) openNote(b.dataset.id); });
 
   /* ---------- Arranque ---------- */
   function boot() {

@@ -168,7 +168,14 @@
           <p class="muted">Elegí una nota del grafo.</p>
         </article>
       </div>
-      <div class="vault__list" id="vault-list" aria-label="Lista de notas"></div>
+      <div class="vault__browser">
+        <div class="vault__search">
+          <span class="vault__search-ico" aria-hidden="true">⌕</span>
+          <input id="vault-q" type="search" placeholder="Buscar en las notas (título, contenido, tags)…" aria-label="Buscar en las notas" autocomplete="off" spellcheck="false">
+          <span id="vault-count" class="mono"></span>
+        </div>
+        <div class="vault__list" id="vault-list" aria-label="Lista de notas por categoría"></div>
+      </div>
     </section>
 
     <!-- ================= ANEXO C — GITHUB ================= -->
