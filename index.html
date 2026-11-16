@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Iñaki Sarobe — Informe de Pentest</title>
+  <meta name="description" content="Portfolio de ciberseguridad de Iñaki Sarobe presentado como un informe de pentest donde el objetivo es él mismo. Pentesting, seguridad ofensiva, bug bounty y HackTheBox.">
+  <meta name="author" content="Iñaki Sarobe">
+  <meta property="og:title" content="Me hice un pentest a mí mismo — Iñaki Sarobe">
+  <meta property="og:description" content="Informe ENG-2026-ISAR: hallazgos ofensivos, evidencia en HackTheBox y bug bounty, cuaderno de campo en Obsidian. Remediación recomendada: contactar al objetivo.">
+  <meta property="og:type" content="website">
+  <meta name="theme-color" content="#0a0c0b">
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,600;0,700;1,400&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <a class="skip" href="#s1">Saltar al resumen ejecutivo</a>
+
+  <!-- Barra superior estilo encabezado de informe -->
+  <header class="runhead" id="top">
+    <div class="runhead__id"><span class="dot"></span><span id="eng-id">ENG-2026-ISAR</span><span class="sep">·</span><span class="hide-sm">INFORME DE PENTEST</span></div>
+    <nav class="runhead__nav" aria-label="Secciones del informe">
+      <a href="#s1">§1 Resumen</a>
+      <a href="#s3">§3 Hallazgos</a>
+      <a href="#annex-a">A · HTB</a>
+      <a href="#annex-b">B · Obsidian</a>
+      <a href="#annex-c">C · GitHub</a>
+      <a href="#s6" class="cta">§6 Remediación</a>
+    </nav>
+    <div class="runhead__class">CLASIFICACIÓN: <b>CONFIDENCIAL</b></div>
+  </header>
+
+  <main>
+    <!-- ================= PORTADA ================= -->
+    <section class="cover" aria-label="Portada">
+      <div class="cover__doc">
+        <p class="kicker">Informe de prueba de penetración · <span class="mono">ENG-2026-ISAR</span></p>
+        <h1>Me hice un pentest<br>a mí mismo<span class="caret">_</span></h1>
+        <p class="lede">Esto es el informe. Cada hallazgo es algo que sé hacer, la evidencia está en HackTheBox, GitHub y mi cuaderno de Obsidian, y la <a href="#s6">remediación recomendada</a> es contratarme.</p>
+
+        <table class="meta">
+          <tr><th>Objetivo</th><td><span class="redact" tabindex="0" title="Pasá el cursor para desclasificar">Iñaki Sarobe</span> <span class="muted">(pasá el cursor para desclasificar)</span></td></tr>
+          <tr><th>Cliente</th><td>Vos: reclutador/a, líder técnico o curioso/a</td></tr>
+          <tr><th>Tipo</th><td>Caja blanca · OSINT sobre fuentes del propio objetivo</td></tr>
+          <tr><th>Ubicación</th><td>La Plata, Buenos Aires, AR <span class="muted mono">(-34.92, -57.95)</span></td></tr>
+          <tr><th>Estado</th><td><span class="pill pill--live">● disponible</span> Pentesting · Seguridad ofensiva, presencial, híbrido o remoto</td></tr>
+          <tr><th>Fecha</th><td class="mono" id="report-date">2026-11-15</td></tr>
+        </table>
+
+        <div class="stamp" aria-hidden="true"><span>CONFIDENCIAL</span><span class="stamp__new">PÚBLICO</span></div>
+      </div>
+
+      <div class="term" id="term" aria-label="Terminal interactiva">
+        <div class="term__bar"><i></i><i></i><i></i><span>visitante@reclutador: ~</span></div>
+        <div class="term__body" id="term-body" role="log" aria-live="polite"></div>
+        <form class="term__prompt" id="term-form" autocomplete="off">
+          <label for="term-input"><span class="u">visitante@reclutador</span>:<span class="p">~</span>$</label>
+          <input id="term-input" spellcheck="false" placeholder="probá: help" aria-label="Comando">
+        </form>
+      </div>
+    </section>
+
+    <!-- ================= §1 RESUMEN EJECUTIVO ================= -->
+    <section class="sec" id="s1">
+      <header class="sec__head"><span class="sec__num">§1</span><h2>Resumen ejecutivo</h2></header>
+      <div class="grid-exec">
+        <div class="prose">
+          <p>Se evaluó a <b>Iñaki Sarobe</b>, estudiante de Ingeniería en Sistemas de Información (UTN FRLP) e investigador en los laboratorios <b>LINES</b> y <b>LINSI</b>. Su orientación es <b>ofensiva</b>: pentesting web, bug bounty y explotación y escalada de privilegios en laboratorio, siempre cerrando con un reporte que se pueda accionar. Viene de seguridad de aplicaciones y desarrollo, así que también sabe cómo se arregla lo que rompe.</p>
+          <p>La evaluación identificó <b id="n-findings">9 hallazgos</b>. El objetivo combina mucha capacidad ofensiva (pentesting web automatizado, bug bounty, root en HackTheBox, agentes de IA para Red Team) con mucha documentación (informes de CVE, cuaderno de campo, charlas).</p>
+          <div class="risk">
+            <div class="risk__label">Riesgo global <span class="muted">(para la competencia, si lo contrata otro equipo)</span></div>
+            <div class="risk__bar"><span style="--w:84%"></span></div>
+            <div class="risk__value">ALTO · 8.4 / 10</div>
+          </div>
+        </div>
+        <aside class="tldr">
+          <h3>TL;DR para RR.&nbsp;HH.</h3>
+          <ul>
+            <li><b>Busca:</b> Pentesting / seguridad ofensiva. Prov. de Buenos Aires o remoto.</li>
+            <li><b>Stack:</b> Kali Linux, Burp Suite, Nmap, Metasploit, sqlmap, ffuf, Impacket, Python, Bash.</li>
+            <li><b>Marcos:</b> OWASP Top 10 y API Security, MITRE ATT&amp;CK, CVSS, CWE.</li>
+            <li><b>Formación:</b> UTN FRLP (2024–2029) · Cisco Introduction to Cybersecurity.</li>
+          </ul>
+          <div class="tldr__cta">
+            <a class="btn" href="assets/cv/Inaki-Sarobe-CV-ES.pdf" download>CV (ES)</a>
+            <a class="btn btn--ghost" href="assets/cv/Inaki-Sarobe-CV-EN.pdf" download>CV (EN)</a>
+          </div>
+        </aside>
+      </div>
+      <div class="kpis">
+        <div class="kpi"><b data-count="44">44</b><span>vulnerabilidades halladas en 14 apps (LINSI)</span></div>
+        <div class="kpi"><b data-count="10">10</b><span>reportes de bug bounty en menos de un mes</span></div>
+        <div class="kpi"><b id="kpi-htb" data-count="16">16</b><span>máquinas de HTB con al menos una flag</span></div>
+        <div class="kpi"><b id="kpi-cves" data-count="3">3</b><span>CVEs explotados en laboratorio y documentados</span></div>
+      </div>
+    </section>
+
+    <!-- ================= §2 ALCANCE Y METODOLOGÍA ================= -->
+    <section class="sec" id="s2">
+      <header class="sec__head"><span class="sec__num">§2</span><h2>Alcance y metodología</h2></header>
+      <div class="prose narrow">
+        <p>El informe sale de un ejercicio de <b>OSINT sobre el propio objetivo</b>, usando solo fuentes que él mismo publica: perfil de LinkedIn y publicaciones, repositorios de GitHub, perfil de HackTheBox, su vault de Obsidian y su CV. No se dañó a nadie durante la evaluación.</p>
+      </div>
+      <ol class="phases">
+        <li><span>01</span><b>Reconocimiento</b><em>LinkedIn · CV · GitHub</em></li>
+        <li><span>02</span><b>Enumeración</b><em>repos, informes, notas</em></li>
+        <li><span>03</span><b>Explotación</b><em>máquinas HTB · bug bounty</em></li>
+        <li><span>04</span><b>Post-explotación</b><em>escalada · informes de CVE</em></li>
+        <li><span>05</span><b>Reporte</b><em>este documento</em></li>
+      </ol>
+      <p class="fineprint">La severidad de cada hallazgo usa un vector propio, <span class="mono">SAR:1.0</span>, con cuatro métricas: <span class="mono">CU</span> curiosidad, <span class="mono">AU</span> automatización, <span class="mono">DO</span> documentación y <span class="mono">EQ</span> trabajo en equipo. No es CVSS, aunque se le parece bastante.</p>
+    </section>
+
+    <!-- ================= §3 HALLAZGOS ================= -->
+    <section class="sec" id="s3">
+      <header class="sec__head"><span class="sec__num">§3</span><h2>Hallazgos</h2></header>
+      <div class="sevbar" id="sevbar" aria-label="Distribución de severidades"></div>
+      <div class="findings" id="findings"></div>
+    </section>
+
+    <!-- ================= §4 BITÁCORA ================= -->
+    <section class="sec" id="s4">
+      <header class="sec__head"><span class="sec__num">§4</span><h2>Bitácora del engagement</h2></header>
+      <p class="sec__sub">Cronología del objetivo, ordenada como una kill chain.</p>
+      <ol class="timeline" id="timeline"></ol>
+    </section>
+
+    <!-- ================= §5 ARSENAL ================= -->
+    <section class="sec" id="s5">
+      <header class="sec__head"><span class="sec__num">§5</span><h2>Herramientas utilizadas</h2></header>
+      <div class="lsla" id="arsenal"></div>
+    </section>
+
+    <!-- ================= ANEXO A — HTB ================= -->
+    <section class="sec annex" id="annex-a">
+      <header class="sec__head"><span class="sec__num">A</span><h2>Anexo A · Evidencia: laboratorio HackTheBox</h2></header>
+      <div class="htb-head">
+        <div class="htb-id">
+          <span class="htb-logo" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="28" height="28"><path fill="currentColor" d="M12 1.5 2.9 6.75v10.5L12 22.5l9.1-5.25V6.75L12 1.5Zm0 2.3 7.1 4.1v8.2L12 20.2l-7.1-4.1V7.9L12 3.8Zm-4.8 5.1v6.2L12 18l4.8-2.9V8.9L12 6 7.2 8.9Zm2 1.2L12 8.3l2.8 1.8v3.8L12 15.7l-2.8-1.8v-3.8Z"/></svg>
+          </span>
+          <div><b>AkaliKaliLinux</b><span class="muted mono"> · nivel <span id="htb-level">13</span></span></div>
+        </div>
+        <a class="btn btn--ghost" href="https://app.hackthebox.com/users/2501615" target="_blank" rel="noopener">Ver perfil en HTB ↗</a>
+      </div>
+      <div class="machines" id="machines"></div>
+      <h3 class="h3">Starting Point</h3>
+      <div class="sp" id="sp"></div>
+    </section>
+
+    <!-- ================= ANEXO B — OBSIDIAN ================= -->
+    <section class="sec annex" id="annex-b">
+      <header class="sec__head"><span class="sec__num">B</span><h2>Anexo B · Cuaderno de campo <span class="muted">(Obsidian)</span></h2></header>
+      <p class="sec__sub">Este anexo se genera desde mi <b>vault real de Obsidian</b>, el que uso para estudiar. Cada máquina, CVE o concepto que documento aparece acá. Los writeups de máquinas activas de HTB se publican embargados.</p>
+      <div class="vault" id="vault">
+        <div class="vault__graph">
+          <div class="vault__toolbar">
+            <span class="mono" id="vault-stats">cargando vault…</span>
+            <div class="legend" id="vault-legend"></div>
+          </div>
+          <canvas id="graph" aria-label="Grafo de notas de Obsidian. Hacé clic en un nodo para abrir la nota."></canvas>
+          <p class="vault__hint">Arrastrá los nodos · clic para abrir una nota</p>
+        </div>
+        <article class="vault__reader" id="reader" aria-live="polite">
+          <p class="muted">Elegí una nota del grafo.</p>
+        </article>
+      </div>
+      <div class="vault__list" id="vault-list" aria-label="Lista de notas"></div>
+    </section>
+
+    <!-- ================= ANEXO C — GITHUB ================= -->
+    <section class="sec annex" id="annex-c">
+      <header class="sec__head"><span class="sec__num">C</span><h2>Anexo C · Herramientas propias y repositorios</h2></header>
+      <div class="projects" id="projects"></div>
+      <h3 class="h3">Informes técnicos publicados <span class="muted mono" id="informes-src">(en vivo desde GitHub)</span></h3>
+      <div class="reports" id="reports"></div>
+      <h3 class="h3">Repositorios públicos <span class="muted mono" id="repos-src">(en vivo desde la API de GitHub)</span></h3>
+      <div class="repos" id="repos"></div>
+    </section>
+
+    <!-- ================= §6 REMEDIACIÓN ================= -->
+    <section class="sec remed" id="s6">
+      <header class="sec__head"><span class="sec__num">§6</span><h2>Remediación recomendada</h2></header>
+      <div class="remed__box">
+        <p class="remed__lead">Contactar al objetivo <b>antes que la competencia</b>.</p>
+        <p class="muted">Prioridad: inmediata. Esfuerzo estimado: un mensaje.</p>
+        <div class="remed__actions">
+          <a class="btn btn--big" id="mail-btn" href="mailto:sarobeinaki@gmail.com?subject=Vi%20tu%20informe%20de%20pentest">✉ sarobeinaki@gmail.com</a>
+          <a class="btn btn--ghost" href="https://www.linkedin.com/in/sarobeinaki/" target="_blank" rel="noopener">LinkedIn ↗</a>
+          <a class="btn btn--ghost" href="https://github.com/inakiSarobe" target="_blank" rel="noopener">GitHub ↗</a>
+          <a class="btn btn--ghost" href="https://app.hackthebox.com/users/2501615" target="_blank" rel="noopener">HackTheBox ↗</a>
+          <a class="btn btn--ghost" href="assets/cv/Inaki-Sarobe-CV-ES.pdf" download>CV ES ⤓</a>
+          <a class="btn btn--ghost" href="assets/cv/Inaki-Sarobe-CV-EN.pdf" download>CV EN ⤓</a>
+        </div>
+        <p class="fineprint">¿Encontraste una vulnerabilidad en este sitio? Hay un <a href=".well-known/security.txt">security.txt</a>. Y si sos de los que abren DevTools, hay una flag esperándote.</p>
+      </div>
+      <div class="signoff">
+        <div><span class="muted">Firmado:</span> <b>Iñaki Sarobe</b>, auditor y auditado</div>
+        <div class="mono muted" id="build-info">ENG-2026-ISAR · rev. 2026-11-15</div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="foot">
+    <span>Hecho a mano, sin frameworks · alojado en GitHub Pages · anexo B sincronizado desde Obsidian</span>
+    <a href="#top">↑ volver a la portada</a>
+  </footer>
+
+  <script src="data/profile.js"></script>
+  <script src="vault/vault.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js" defer></script>
+  <script src="js/app.js" defer></script>
+  <script src="js/vault.js" defer></script>
+</body>
+</html>

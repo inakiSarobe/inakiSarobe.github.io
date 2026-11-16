@@ -1,0 +1,8 @@
+Contact: mailto:sarobeinaki@gmail.com
+Expires: 2027-11-15T00:00:00.000Z
+Preferred-Languages: es, en
+Canonical: https://inakisarobe.github.io/.well-known/security.txt
+Policy: https://inakisarobe.github.io/#s6
+
+# ¿Encontraste algo en este sitio? Reportalo de forma responsable y lo
+# agrego como hallazgo (con crédito) en el próximo informe.

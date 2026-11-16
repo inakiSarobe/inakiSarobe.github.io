@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+
+# Si estás leyendo esto, ya estás haciendo recon. Bien ahí.
+# La flag no está acá: probá la consola del navegador.
+Disallow: /no-hay-nada-aca/
