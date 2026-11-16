@@ -458,6 +458,8 @@ body.lb-open { overflow: hidden; }
   .term__body { max-height: 360px; font-size: 12px; }
   .vault__reader { padding: 18px 16px; }
   #graph { min-height: 340px; }
+  /* 16px evita que el móvil haga zoom al tocar un input (iOS/Android zoomean si es <16px) */
+  .term__prompt input, .vault__search input { font-size: 16px; }
 }
 
 /* ---------- Impresión: el portfolio se imprime como un informe real ---------- */
