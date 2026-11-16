@@ -1,399 +1,492 @@
-/* ENG-2026-ISAR — lógica principal (terminal, hallazgos, anexos). Sin dependencias. */
+/* Iñaki Sarobe — portfolio (SPA). Sidebar + rutas + vistas. Sin frameworks. */
 (function () {
   "use strict";
-  const P = window.PROFILE;
+  const P = window.PROFILE || {};
+  const V = window.VAULT || { notes: [] };
   const $ = (s, el = document) => el.querySelector(s);
-  const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-  const SEV = { critica: "Crítica", alta: "Alta", media: "Media", baja: "Baja", info: "Info" };
-  const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const slug = (s) => String(s).toLowerCase().trim().replace(/\s+/g, "-").replace(/[^\w\-.]/g, "");
+  const view = $("#view");
 
-  /* ================= §3 Hallazgos ================= */
-  const reportUrl = (n) => `https://github.com/${P.githubUser}/Informes-Tecnicos/blob/main/${encodeURIComponent(n)}/${encodeURIComponent(n)}.pdf`;
-  const ext = (url) => /^https?:/.test(url) ? ' target="_blank" rel="noopener"' : "";
+  /* ============ secciones ============ */
+  const SECTIONS = [
+    { id: "inicio", label: "Inicio", icon: "◆" },
+    { id: "capacidades", label: "Capacidades", icon: "★" },
+    { id: "htb", label: "CTFs", icon: "▲" },
+    { id: "vuln", label: "Vulnerabilidades", icon: "⚑" },
+    { id: "proyectos", label: "Proyectos", icon: "◇" },
+    { id: "notas", label: "Notas", icon: "#" },
+    { id: "contacto", label: "Contacto", icon: "@" }
+  ];
 
-  // Evidencia de informes: unos pocos ejemplos elegidos + enlace al repo con el total en vivo,
-  // así el hallazgo no crece con cada informe nuevo y se entiende que hay más.
-  function reportsEvidence() {
-    const ex = (P.featuredReports || []).map((n) =>
-      `<li><a href="${reportUrl(n)}" target="_blank" rel="noopener"><b>${esc(n)}</b></a> · ${esc(P.reportNotes[n] || "informe técnico")}</li>`);
-    return {
-      first: ex.length ? `<li>Informes de CVE explotados en laboratorio, por ejemplo:<ul class="f-examples">${ex.join("")}</ul></li>` : "",
-      after: `<a class="f-more" href="${P.links.informes}" target="_blank" rel="noopener"><span class="reports-total">Ver todos los informes en el repositorio</span> ↗</a>`
-    };
+  /* ============ datos derivados ============ */
+  const noteList = (V.notes || []);
+  const byId = new Map(noteList.map((n) => [n.id.toLowerCase(), n]));
+  const noteType = (n) => {
+    const t = String(n.props && n.props.tipo || "").toLowerCase().replace("á", "a");
+    if (t) return t;
+    const f = String(n.folder || "").toLowerCase();
+    if (/m[aá]quina/.test(f)) return "maquina";
+    if (/vulnerab/.test(f)) return "vulnerabilidad";
+    if (/concepto/.test(f)) return "concepto";
+    if (/herramienta/.test(f)) return "herramienta";
+    if (/curso/.test(f)) return "curso";
+    return "nota";
+  };
+  const vulnNotes = () => noteList.filter((n) => noteType(n) === "vulnerabilidad");
+  const machineNames = new Set((P.htb && P.htb.machines || []).map((m) => slug(m.name)));
+
+  // Resolver un wikilink [[nombre]] a una ruta interna
+  function routeForName(name) {
+    const n = byId.get(String(name).toLowerCase());
+    if (n) {
+      const t = noteType(n);
+      if (t === "maquina") return "#/htb/" + slug(n.id);
+      if (t === "vulnerabilidad") return "#/vuln/" + slug(n.id);
+      return "#/notas/" + encodeURIComponent(n.id);
+    }
+    if (machineNames.has(slug(name))) return "#/htb/" + slug(name);
+    return null;
   }
 
-  function renderFindings() {
-    const box = $("#findings");
-    box.innerHTML = P.findings.map((f, i) => {
-      const rep = f.reportsEvidence ? reportsEvidence() : { first: "", after: "" };
-      return `
-      <details class="finding sev-${f.sev} reveal" ${i === 0 ? "open" : ""} id="${f.id}">
-        <summary>
-          <span class="f-id">${f.id}</span>
-          <span class="f-sev">${SEV[f.sev]}</span>
-          <span class="f-title">${f.title}</span>
-          <span class="f-score">${f.score.toFixed(1)}</span>
-        </summary>
-        <div class="f-body">
-          <div>
-            <p class="f-where">${esc(f.where)}</p>
-            <h4>Descripción</h4><p>${f.desc}</p>
-            <h4>Evidencia${f.reportsEvidence ? " (muestra)" : ""}</h4><ul>${rep.first}${f.evidence.map((e) => `<li>${e}</li>`).join("")}</ul>
-            ${rep.after}
-          </div>
-          <div>
-            <h4>Impacto para tu organización</h4><p class="f-impact">${f.impact}</p>
-            <h4>Vector</h4><span class="f-vector" title="CU: curiosidad · AU: automatización · DO: documentación · EQ: equipo">${esc(f.vector)}</span>
-            <div class="tags">${f.tags.map((t) => `<span class="tag">${esc(t)}</span>`).join("")}</div>
-            ${f.links ? `<h4>Referencias</h4><ul>${f.links.map((l) => `<li><a href="${l.url}"${ext(l.url)}>${esc(l.label)} ${ext(l.url) ? "↗" : "→"}</a></li>`).join("")}</ul>` : ""}
-          </div>
-        </div>
-      </details>`;
+  /* ============ markdown (notas / writeups) ============ */
+  const IMG = /\.(png|jpe?g|gif|webp|svg|avif)$/i;
+  function renderMd(md) {
+    if (!md) return "";
+    if (!window.marked) return `<pre>${esc(md)}</pre>`;
+    const parts = String(md).split(/(```[\s\S]*?```)/g);
+    let s = parts.map((chunk, i) => {
+      if (i % 2) return chunk;
+      let x = chunk.replace(/%%[\s\S]*?%%/g, "");
+      x = x.replace(/!\[\[([^\]|]+)(?:\|[^\]]*)?\]\]/g, (_, t) =>
+        IMG.test(t) ? `<img src="vault/assets/${encodeURIComponent(t.trim())}" alt="${esc(t)}" loading="lazy">` : t.trim());
+      x = x.replace(/\[\[([^\]|#]+)(?:#[^\]|]*)?(?:\|([^\]]+))?\]\]/g, (_, t, a) => {
+        const r = routeForName(t.trim()); const label = esc((a || t).trim());
+        return r ? `<a href="${r}">${label}</a>` : `<span class="mutxt">${label}</span>`;
+      });
+      x = x.replace(/==([^=\n]+)==/g, "<mark>$1</mark>");
+      return x;
     }).join("");
-
-    const counts = {};
-    P.findings.forEach((f) => (counts[f.sev] = (counts[f.sev] || 0) + 1));
-    $("#sevbar").innerHTML = Object.keys(SEV).filter((k) => counts[k]).map((k) =>
-      `<div class="sev-${k}" style="flex:${counts[k]}" title="${SEV[k]}: ${counts[k]}">${counts[k]} ${SEV[k]}</div>`).join("");
-    $("#n-findings").textContent = `${P.findings.length} hallazgos`;
+    let html = window.marked.parse(s, { gfm: true });
+    html = html.replace(/<blockquote>\s*<p>\s*\[!(\w+)\]([-+]?)\s*/gi,
+      (_, type) => `<blockquote class="callout callout--${type.toLowerCase()}"><p>`);
+    return html;
+  }
+  function propsTable(n) {
+    const keep = Object.entries(n.props || {}).filter(([k, v]) => v != null && v !== "" && !["tipo", "tags", "publicar"].includes(k));
+    if (!keep.length) return "";
+    return `<table class="props">${keep.map(([k, v]) =>
+      `<tr><th>${esc(k)}</th><td>${esc(Array.isArray(v) ? v.join(", ") : v)}</td></tr>`).join("")}</table>`;
   }
 
-  /* ================= §4 Bitácora ================= */
-  const PHASE = { recon: "recon", enum: "enum", exploit: "exploit", post: "post-expl.", report: "reporte" };
-  function renderTimeline() {
-    $("#timeline").innerHTML = P.timeline.map((t) => `
-      <li class="ph-${t.phase} reveal">
-        <span class="t-when">${esc(t.when)}</span>
-        <span class="t-dot"></span>
-        <div class="t-body"><b>${esc(t.title)}</b><span class="t-phase">${PHASE[t.phase]}</span><p>${esc(t.text)}</p></div>
-      </li>`).join("");
+  /* ============ sidebar ============ */
+  function buildSidebar() {
+    $("#side-role").textContent = P.headline || "";
+    $("#side-nav").innerHTML = SECTIONS.map((s) =>
+      `<a class="snav" data-sec="${s.id}" href="#/${s.id}"><i aria-hidden="true">${s.icon}</i>${esc(s.label)}</a>`).join("");
+    const L = P.links || {};
+    $("#side-foot").innerHTML = `
+      <div class="side__links">
+        ${L.cvEs ? `<a href="${L.cvEs}" download title="CV (ES)">CV ES</a>` : ""}
+        ${L.cvEn ? `<a href="${L.cvEn}" download title="CV (EN)">CV EN</a>` : ""}
+      </div>
+      <div class="side__social">
+        ${L.github ? `<a href="${L.github}" target="_blank" rel="noopener" title="GitHub">GitHub</a>` : ""}
+        ${L.linkedin ? `<a href="${L.linkedin}" target="_blank" rel="noopener" title="LinkedIn">LinkedIn</a>` : ""}
+        ${L.htb ? `<a href="${L.htb}" target="_blank" rel="noopener" title="HackTheBox">HTB</a>` : ""}
+      </div>
+      <a class="side__mail" href="mailto:${esc(P.email || "")}">${esc(P.email || "")}</a>`;
+  }
+  function setActive(sec) {
+    document.querySelectorAll(".snav").forEach((a) => a.classList.toggle("on", a.dataset.sec === sec));
   }
 
-  /* ================= §5 Arsenal ================= */
-  function renderArsenal() {
-    const total = P.arsenal.reduce((n, d) => n + d.items.length, 0);
-    $("#arsenal").innerHTML =
-      `<div><span class="cmd">inaki@lines:~$</span> ls -la /opt/arsenal</div><div class="perm">total ${total}</div>` +
-      P.arsenal.map((d) => `
-        <div class="row"><span class="perm">${d.perm}</span><span class="own">inaki</span><span class="grp">utn</span><span class="dir">${esc(d.dir)}/</span></div>
-        <div class="files">${d.items.map((x) => `<span>${esc(x)}</span>`).join("")}</div>`).join("");
+  /* ============ vistas ============ */
+  const Views = {};
+
+  Views.inicio = () => {
+    const L = P.links || {};
+    const kpi = kpis();
+    return `
+    <section class="hero reveal in">
+      <p class="hero__kicker">Portfolio · ${esc(P.location || "")}</p>
+      <h1 class="hero__name">${esc(P.name || "")}</h1>
+      <p class="hero__role">${esc(P.headline || "")}</p>
+      <p class="hero__pitch">Estudiante de Ing. en Sistemas (UTN FRLP) e investigador en los laboratorios
+        <b>LINES</b> y <b>LINSI</b>. Me dedico a la <b>seguridad ofensiva</b> —pentesting web, bug bounty y
+        explotación— y a <b>automatizarla con agentes de IA</b>. Esto es lo que vengo haciendo; movete por la
+        izquierda o apretá <b>Ctrl&nbsp;K</b> para ir directo a cualquier cosa.</p>
+      <div class="hero__cta">
+        ${L.cvEs ? `<a class="btn btn--go" href="${L.cvEs}" download>⤓ Descargar CV</a>` : ""}
+        <a class="btn" href="#/contacto">✉ Contacto</a>
+        ${L.github ? `<a class="btn btn--ghost" href="${L.github}" target="_blank" rel="noopener">GitHub ↗</a>` : ""}
+        ${L.htb ? `<a class="btn btn--ghost" href="${L.htb}" target="_blank" rel="noopener">HackTheBox ↗</a>` : ""}
+      </div>
+    </section>
+
+    <section class="kpis reveal in">${kpi.map((k) =>
+      `<div class="kpi"><b>${esc(k[0])}</b><span>${esc(k[1])}</span></div>`).join("")}</section>
+
+    ${P.now ? `<section class="now reveal in">
+      <div class="now__head"><span class="now__dot"></span>${esc(P.now.label)}${P.now.updated ? ` <span class="now__date">· ${esc(P.now.updated)}</span>` : ""}</div>
+      <ul class="now__list">${(P.now.items || []).map((it) => `<li>${it}</li>`).join("")}</ul>
+    </section>` : ""}
+
+    <h2 class="vtitle">Explorá</h2>
+    <section class="tiles reveal in">
+      ${tile("capacidades", "★", "Capacidades", "Lo que sé hacer, con evidencia")}
+      ${tile("htb", "▲", "CTFs", `${(P.htb && P.htb.machines || []).length} máquinas resueltas · cómo las resolví`)}
+      ${tile("vuln", "⚑", "Vulnerabilidades", `${vulnNotes().length} CVEs documentados`)}
+      ${tile("proyectos", "◇", "Proyectos", `${(P.projects || []).length} proyectos propios`)}
+      ${tile("notas", "#", "Notas", "Mis notas de estudio")}
+      ${tile("contacto", "@", "Contacto", "Hablemos")}
+    </section>`;
+  };
+  const tile = (sec, icon, title, sub) =>
+    `<a class="tile" href="#/${sec}"><span class="tile__ico">${icon}</span><b>${esc(title)}</b><span>${esc(sub)}</span></a>`;
+
+  function kpis() {
+    const h = P.htb || {}; const sp = (h.startingPoint || []).reduce((n, t) => n + (t.boxes || []).filter((b) => b[1] > 0).length, 0);
+    return [
+      ["44", "vulnerabilidades halladas (LINSI)"],
+      ["10", "reportes de bug bounty"],
+      [String(sp + (h.machinesOwned || 0)), "máquinas de CTF resueltas"],
+      [String(vulnNotes().length || 3), "CVEs documentados"]
+    ];
   }
 
-  /* ================= Anexo A — HTB ================= */
-  function renderHTB() {
-    const h = P.htb;
-    $("#htb-level").textContent = h.level;
-    $("#machines").innerHTML = h.machines.map((m) => {
+  Views.capacidades = () => `
+    <h1 class="vhead">Capacidades <span class="vhead__sub">lo que sé hacer, con evidencia</span></h1>
+    <div class="caps">${(P.findings || []).filter((f) => f.sev !== "info").map((f) => `
+      <article class="cap reveal in">
+        <h3>${esc(f.title)}</h3>
+        <p class="cap__where">${esc(f.where)}</p>
+        <p class="cap__desc">${f.desc}</p>
+        <div class="cap__ev"><h4>Evidencia</h4><ul>${(f.evidence || []).map((e) => `<li>${e}</li>`).join("")}</ul></div>
+        <p class="cap__impact">${f.impact}</p>
+        <div class="tags">${(f.tags || []).map((t) => `<span class="tag">${esc(t)}</span>`).join("")}</div>
+      </article>`).join("")}</div>`;
+
+  /* ---- HackTheBox ---- */
+  Views.htb = (id) => {
+    const h = P.htb || {}; const machines = h.machines || [];
+    if (id) {
+      const m = machines.find((x) => slug(x.name) === id);
+      if (!m) return notFound();
+      const note = byId.get(m.name.toLowerCase());
       const owned = m.status === "owned";
+      const writeup = note && !note.embargo && note.body
+        ? `<div class="md">${renderMd(note.body)}</div>`
+        : (m.status === "active"
+          ? `<div class="embargo-card"><b>RESOLUCIÓN EMBARGADA</b><p>Es una máquina activa de la plataforma (HackTheBox). Por sus reglas, publico la resolución completa cuando se retire.</p></div>`
+          : "");
       return `
-      <article class="machine ${m.status} reveal">
-        <div class="m-name">${esc(m.name)}</div>
-        <div class="m-meta"><span>${esc(m.os)}</span><span>·</span><span>${esc(m.diff)}</span><span>·</span><span>${esc(m.when)}</span></div>
-        <div class="m-flags"><span class="${owned ? "ok" : ""}">user.txt</span><span class="${owned ? "ok" : ""}">root.txt</span></div>
-        <ul class="chain">${m.chain.map(([k, v]) => `<li><b>${esc(k)}</b><span>${esc(v)}</span></li>`).join("")}</ul>
-        ${m.note ? `<p class="note">${esc(m.note)}</p>` : ""}
-        ${m.report ? `<a class="btn btn--ghost" href="${m.report}" target="_blank" rel="noopener">Informe técnico ↗</a>` : ""}
-      </article>`;
-    }).join("");
-
-    $("#sp").innerHTML = h.startingPoint.map((t) => {
-      const done = t.boxes.filter((b) => b[1] === 100).length;
-      return `<div class="sp-tier reveal"><b>${esc(t.tier)}<small>${done}/${t.boxes.length} completas</small></b>
+      <nav class="crumbs"><a href="#/htb">CTFs</a> / <span>${esc(m.name)}</span></nav>
+      <h1 class="vhead">${esc(m.name)}</h1>
+      <div class="m-meta"><span>${esc(m.os)}</span>·<span>${esc(m.diff)}</span>·<span>${esc(m.when)}</span>
+        <span class="m-flags"><i class="${owned ? "ok" : ""}">user</i><i class="${owned ? "ok" : ""}">root</i></span></div>
+      <ul class="chain big">${(m.chain || []).map(([k, v]) => `<li><b>${esc(k)}</b><span>${esc(v)}</span></li>`).join("")}</ul>
+      ${m.report ? `<a class="btn btn--ghost" href="${m.report}" target="_blank" rel="noopener">Informe técnico (PDF) ↗</a>` : ""}
+      ${writeup}`;
+    }
+    return `
+    <h1 class="vhead">CTFs resueltos <span class="vhead__sub">HackTheBox · ${esc(P.handle || "")} · nivel ${h.level || ""}</span></h1>
+    <p class="vlede">Máquinas de CTF que resolví (en la plataforma HackTheBox). Elegí una y mirá cómo la resolví, paso a paso, hasta tomar control total (root).</p>
+    <div class="cards">${machines.map((m) => {
+      const owned = m.status === "owned";
+      return `<a class="card machine-card ${m.status}" href="#/htb/${slug(m.name)}">
+        <div class="card__top"><b>${esc(m.name)}</b><span class="badge ${owned ? "ok" : "warn"}">${owned ? "pwned" : "activa"}</span></div>
+        <div class="card__meta">${esc(m.os)} · ${esc(m.diff)} · ${esc(m.when)}</div>
+        <div class="card__chain">${(m.chain || []).map(([k]) => `<span>${esc(k)}</span>`).join("<i>→</i>")}</div>
+      </a>`;
+    }).join("")}</div>
+    ${startingPoint(h)}`;
+  };
+  function startingPoint(h) {
+    if (!h.startingPoint) return "";
+    return `<h2 class="vtitle">Retos introductorios <span class="mutxt mono">(Starting Point)</span></h2><div class="sp">${h.startingPoint.map((t) => {
+      const done = (t.boxes || []).filter((b) => b[1] === 100).length;
+      return `<div class="sp-tier"><b>${esc(t.tier)} <small>${done}/${t.boxes.length}</small></b>
         <div class="sp-boxes">${t.boxes.map(([n, p]) => `<span class="sp-box ${p === 100 ? "full" : p > 0 ? "half" : ""}" title="${esc(n)}: ${p}%">${esc(n)}</span>`).join("")}</div></div>`;
-    }).join("");
-
-    // KPI: máquinas con al menos una flag
-    const sp = h.startingPoint.reduce((n, t) => n + t.boxes.filter((b) => b[1] > 0).length, 0);
-    const k = $("#kpi-htb");
-    if (k) { k.dataset.count = String(sp + h.machinesOwned); k.textContent = String(sp + h.machinesOwned); }
+    }).join("")}</div>`;
   }
 
-  /* ================= Anexo C — proyectos + GitHub en vivo ================= */
-  const LANG = { Python: "#3572A5", HTML: "#e34c26", JavaScript: "#f1e05a", CSS: "#563d7c", C: "#555555", "C++": "#f34b7d", Shell: "#89e051", PowerShell: "#012456" };
-  function ago(iso) {
-    const d = (Date.now() - new Date(iso).getTime()) / 864e5;
-    if (d < 1) return "hoy";
-    if (d < 30) return `hace ${Math.round(d)} d`;
-    if (d < 365) return `hace ${Math.round(d / 30)} m`;
-    return `hace ${(d / 365).toFixed(1)} a`;
-  }
-  async function cachedJSON(url, key, ttlMs = 3600e3) {
-    try {
-      const c = JSON.parse(localStorage.getItem(key) || "null");
-      if (c && Date.now() - c.t < ttlMs) return c.d;
-    } catch (_) {}
+  /* ---- Vulnerabilidades ---- */
+  Views.vuln = (id) => {
+    const list = vulnNotes();
+    if (id) {
+      const n = list.find((x) => slug(x.id) === id) || byId.get(decodeURIComponent(id).toLowerCase());
+      if (!n) return notFound();
+      const rep = `https://github.com/${P.githubUser}/Informes-Tecnicos/blob/main/${encodeURIComponent(n.id)}/${encodeURIComponent(n.id)}.pdf`;
+      return `
+      <nav class="crumbs"><a href="#/vuln">Vulnerabilidades</a> / <span>${esc(n.title)}</span></nav>
+      <h1 class="vhead">${esc(n.title)}</h1>
+      ${propsTable(n)}
+      <a class="btn btn--ghost" href="${rep}" target="_blank" rel="noopener">Informe completo (PDF) ↗</a>
+      <div class="md">${renderMd(n.body)}</div>`;
+    }
+    return `
+    <h1 class="vhead">Vulnerabilidades <span class="vhead__sub">CVEs que analicé y documenté</span></h1>
+    <p class="vlede">Cada CVE que exploto en laboratorio termina en un informe: causa raíz, prueba de concepto, detección y mitigación.</p>
+    <div class="cards">${list.map((n) => `
+      <a class="card" href="#/vuln/${slug(n.id)}">
+        <div class="card__top"><b>${esc(n.id)}</b>${n.props && n.props.severidad ? `<span class="badge">${esc(n.props.severidad)}</span>` : ""}</div>
+        <div class="card__meta">${esc(firstLine(n.body) || (n.props && n.props.cwe) || "")}</div>
+        <div class="card__tags">${(n.tags || []).slice(0, 4).map((t) => `<span class="tag">#${esc(t)}</span>`).join("")}</div>
+      </a>`).join("") || `<p class="mutxt">Todavía no hay CVEs sincronizados.</p>`}</div>
+    <p class="vfoot"><a href="${(P.links || {}).informes}" target="_blank" rel="noopener">Ver todos los informes en GitHub ↗</a></p>`;
+  };
+  const firstLine = (md) => {
+    if (!md) return "";
+    const m = String(md).replace(/^#.*$/gm, "").split("\n").map((l) => l.trim()).find((l) => l && !l.startsWith("|") && !l.startsWith(">"));
+    return m ? m.replace(/[*_`\[\]]/g, "").slice(0, 120) : "";
+  };
+
+  /* ---- Proyectos ---- */
+  Views.proyectos = (id) => {
+    const projs = P.projects || [];
+    if (id) {
+      const p = projs.find((x) => slug(x.name) === id);
+      if (!p) return notFound();
+      return `
+      <nav class="crumbs"><a href="#/proyectos">Proyectos</a> / <span>${esc(p.name)}</span></nav>
+      <h1 class="vhead">${esc(p.name)}</h1>
+      <p class="proj-kind">${esc(p.kind)} · <span class="mono">${esc(p.stack)}</span></p>
+      <p class="proj-desc">${esc(p.desc)}</p>
+      <div class="hero__cta">
+        ${p.url ? `<a class="btn btn--ghost" href="${p.url}" target="_blank" rel="noopener">${p.url.includes("github.com") ? "Código" : "Demo en vivo"} ↗</a>` : ""}
+        ${p.repo ? `<a class="btn btn--ghost" href="${p.repo}" target="_blank" rel="noopener">Repo ↗</a>` : ""}
+      </div>`;
+    }
+    return `
+    <h1 class="vhead">Proyectos <span class="vhead__sub">herramientas y sistemas propios</span></h1>
+    <div class="cards">${projs.map((p) => `
+      <a class="card" href="#/proyectos/${slug(p.name)}">
+        <div class="card__top"><b>${esc(p.name)}</b></div>
+        <span class="card__kind">${esc(p.kind)}</span>
+        <div class="card__meta">${esc(p.desc).slice(0, 110)}…</div>
+        <div class="card__stack mono">${esc(p.stack)}</div>
+      </a>`).join("")}</div>
+    <div id="repos-wrap"><h2 class="vtitle">Repositorios <span class="mutxt mono" id="repos-src">(en vivo desde GitHub)</span></h2><div class="repos" id="repos"></div></div>`;
+  };
+
+  /* ---- Notas ---- */
+  Views.notas = (id) => {
+    if (id) {
+      const n = byId.get(decodeURIComponent(id).toLowerCase());
+      if (!n) return notFound();
+      return `<nav class="crumbs"><a href="#/notas">Notas</a> / <span>${esc(n.title)}</span></nav>
+        <h1 class="vhead">${esc(n.title)}</h1>${propsTable(n)}<div class="md">${renderMd(n.body)}</div>`;
+    }
+    const groups = new Map();
+    noteList.forEach((n) => { const k = (n.folder || "zzz").split("/")[0]; (groups.get(k) || groups.set(k, []).get(k)).push(n); });
+    const keys = [...groups.keys()].sort();
+    return `
+    <h1 class="vhead">Notas <span class="vhead__sub">mis notas de estudio</span></h1>
+    <p class="vlede">Documento cada máquina, CVE y concepto que estudio. Esto sale de mis notas reales de estudio (las armo con Obsidian).</p>
+    <div class="vault"><div class="vault__graph">
+      <div class="vault__toolbar"><span id="vstats" class="mono"></span><div class="legend" id="vlegend"></div></div>
+      <canvas id="graph" aria-label="Grafo de notas. Clic en un nodo para abrir la nota."></canvas>
+      <p class="vhint">Arrastrá los nodos · clic para abrir</p>
+    </div></div>
+    ${keys.map((k) => `<div class="ncat"><div class="ncat__h">${esc(k.replace(/^\d+\s+/, ""))}<span>${groups.get(k).length}</span></div>
+      <div class="cards">${groups.get(k).sort((a, b) => a.title.localeCompare(b.title, "es")).map((n) => {
+        const t = noteType(n); const r = t === "maquina" ? "#/htb/" + slug(n.id) : t === "vulnerabilidad" ? "#/vuln/" + slug(n.id) : "#/notas/" + encodeURIComponent(n.id);
+        return `<a class="card card--sm" href="${r}"><b>${esc(n.title)}</b>${n.embargo ? `<span class="badge warn">embargada</span>` : ""}</a>`;
+      }).join("")}</div></div>`).join("")}`;
+  };
+
+  Views.contacto = () => {
+    const L = P.links || {};
+    return `
+    <h1 class="vhead">Contacto</h1>
+    <p class="vlede">¿Buscás alguien de seguridad ofensiva / AppSec / automatización? Hablemos.</p>
+    <div class="hero__cta">
+      <a class="btn btn--go" href="mailto:${esc(P.email)}?subject=Vi%20tu%20portfolio">✉ ${esc(P.email)}</a>
+      ${L.linkedin ? `<a class="btn btn--ghost" href="${L.linkedin}" target="_blank" rel="noopener">LinkedIn ↗</a>` : ""}
+      ${L.github ? `<a class="btn btn--ghost" href="${L.github}" target="_blank" rel="noopener">GitHub ↗</a>` : ""}
+      ${L.htb ? `<a class="btn btn--ghost" href="${L.htb}" target="_blank" rel="noopener">HackTheBox ↗</a>` : ""}
+      ${L.cvEs ? `<a class="btn btn--ghost" href="${L.cvEs}" download>CV ES ⤓</a>` : ""}
+      ${L.cvEn ? `<a class="btn btn--ghost" href="${L.cvEn}" download>CV EN ⤓</a>` : ""}
+    </div>
+    <p class="fineprint">¿Encontraste algo en este sitio? Hay un <a href=".well-known/security.txt">security.txt</a>.</p>`;
+  };
+
+  const notFound = () => `<h1 class="vhead">No encontrado</h1><p class="vlede">Esa página no existe. <a href="#/inicio">Volver al inicio</a>.</p>`;
+
+  /* ============ GitHub en vivo (repos) ============ */
+  const LANG = { Python: "#3572A5", HTML: "#e34c26", JavaScript: "#f1e05a", CSS: "#563d7c", C: "#555", "C++": "#f34b7d", Shell: "#89e051", PowerShell: "#012456" };
+  async function cachedJSON(url, key, ttl = 3600e3) {
+    try { const c = JSON.parse(localStorage.getItem(key) || "null"); if (c && Date.now() - c.t < ttl) return c.d; } catch (_) {}
     const r = await fetch(url, { headers: { Accept: "application/vnd.github+json" } });
     if (!r.ok) throw new Error("HTTP " + r.status);
     const d = await r.json();
     try { localStorage.setItem(key, JSON.stringify({ t: Date.now(), d })); } catch (_) {}
     return d;
   }
-  function renderProjects() {
-    $("#projects").innerHTML = P.projects.map((p) => `
-      <article class="proj reveal">
-        <span class="proj__kind">${esc(p.kind)}</span>
-        <h3>${esc(p.name)}</h3>
-        <p>${esc(p.desc)}</p>
-        <span class="proj__stack">${esc(p.stack)}</span>
-        <div class="proj__links">
-          ${p.url ? `<a href="${p.url}" target="_blank" rel="noopener">${p.url.includes("github.com") ? "código" : "demo en vivo"} ↗</a>` : `<span class="muted">repo privado</span>`}
-          ${p.repo ? `<a href="${p.repo}" target="_blank" rel="noopener">repo ↗</a>` : ""}
-        </div>
-      </article>`).join("");
-  }
-  // Anexo C: los informes más recientes y una tarjeta "+N más" cuando el repo crece.
-  const MAX_REPORTS = 6;
-  const cveKey = (n) => { const m = /^CVE-(\d{4})-(\d+)$/i.exec(n); return m ? [+m[1], +m[2]] : [0, 0]; };
-  const sortReports = (names) => names.slice().sort((a, b) => {
-    const x = cveKey(a), y = cveKey(b);
-    return (y[0] - x[0]) || (y[1] - x[1]) || a.localeCompare(b);
-  });
-  function drawReports(names, live) {
-    const shown = names.slice(0, MAX_REPORTS);
-    const rest = names.length - shown.length;
-    $("#reports").innerHTML = shown.map((n) => `
-      <a class="report" href="${reportUrl(n)}" target="_blank" rel="noopener">
-        <span class="report__ico">PDF</span>
-        <span><b>${esc(n)}</b><span>${esc(P.reportNotes[n] || "Informe técnico")}</span></span>
-      </a>`).join("") + (rest > 0 ? `
-      <a class="report report--more" href="${P.links.informes}" target="_blank" rel="noopener">
-        <span class="report__ico">+${rest}</span>
-        <span><b>${rest} informe${rest > 1 ? "s" : ""} más</b><span>ver todos en GitHub</span></span>
-      </a>` : "");
-    $("#informes-src").textContent = live ? "(en vivo desde GitHub)" : "(copia local; GitHub no respondió)";
-    if (!live) return;
-    const total = names.length;
-    const kpi = $("#kpi-cves");
-    if (kpi) { kpi.dataset.count = String(total); kpi.textContent = String(total); }
-    document.querySelectorAll(".reports-total").forEach((el) => {
-      el.innerHTML = `Ver los <b>${total} informe${total > 1 ? "s" : ""}</b> publicados (y contando) en el repositorio`;
-    });
-  }
-  async function loadReports() {
-    const fallback = sortReports(Object.keys(P.reportNotes));
-    try {
-      const d = await cachedJSON(`https://api.github.com/repos/${P.githubUser}/Informes-Tecnicos/contents/`, "gh_informes");
-      const dirs = sortReports(d.filter((x) => x.type === "dir").map((x) => x.name));
-      drawReports(dirs.length ? dirs : fallback, dirs.length > 0);
-    } catch (_) { drawReports(fallback, false); }
-  }
   async function loadRepos() {
-    const box = $("#repos");
-    const fallback = [
-      { name: "Projects", language: "Python", pushed_at: "2026-08-18T23:23:04Z", stargazers_count: 0, html_url: `https://github.com/${P.githubUser}/Projects` },
-      { name: "morocho", language: "HTML", pushed_at: "2026-09-16T03:04:13Z", stargazers_count: 0, html_url: `https://github.com/${P.githubUser}/morocho`, homepage: "https://inakisarobe.github.io/morocho/" },
-      { name: "Informes-Tecnicos", language: null, pushed_at: "2025-09-05T06:05:59Z", stargazers_count: 0, html_url: `https://github.com/${P.githubUser}/Informes-Tecnicos` }
+    const box = $("#repos"); if (!box) return;
+    const fb = [
+      { name: "Projects", language: "Python", html_url: `https://github.com/${P.githubUser}/Projects` },
+      { name: "morocho", language: "HTML", html_url: `https://github.com/${P.githubUser}/morocho`, homepage: "https://inakisarobe.github.io/morocho/" },
+      { name: "Informes-Tecnicos", language: null, html_url: `https://github.com/${P.githubUser}/Informes-Tecnicos` }
     ];
-    let repos = fallback, live = false;
-    try {
-      repos = (await cachedJSON(`https://api.github.com/users/${P.githubUser}/repos?per_page=100&sort=pushed`, "gh_repos"))
-        .filter((r) => !r.fork && !/\.github\.io$/i.test(r.name));
-      live = true;
-    } catch (_) {}
+    let repos = fb, live = false;
+    try { repos = (await cachedJSON(`https://api.github.com/users/${P.githubUser}/repos?per_page=100&sort=pushed`, "gh_repos")).filter((r) => !r.fork && !/\.github\.io$/i.test(r.name)); live = true; } catch (_) {}
     box.innerHTML = repos.map((r) => `
-      <a class="repo reveal in" href="${r.html_url}" target="_blank" rel="noopener">
-        <b>${esc(P.githubUser)}/${esc(r.name)}</b>
-        <p>${esc(P.repoNotes[r.name] || r.description || "Sin descripción.")}</p>
-        <div class="repo__meta">
-          ${r.language ? `<span><i class="lang-dot" style="background:${LANG[r.language] || "#888"}"></i>${esc(r.language)}</span>` : ""}
-          <span>★ ${r.stargazers_count}</span>
-          <span>push ${ago(r.pushed_at || r.updated_at)}</span>
-        </div>
+      <a class="repo" href="${r.html_url}" target="_blank" rel="noopener">
+        <b>${esc(r.name)}</b>
+        <p>${esc((P.repoNotes || {})[r.name] || r.description || "Sin descripción.")}</p>
+        <div class="repo__meta">${r.language ? `<span><i class="lang-dot" style="background:${LANG[r.language] || "#888"}"></i>${esc(r.language)}</span>` : ""}<span>★ ${r.stargazers_count || 0}</span></div>
       </a>`).join("");
-    $("#repos-src").textContent = live ? "(en vivo desde la API de GitHub)" : "(copia local; la API no respondió)";
+    const src = $("#repos-src"); if (src) src.textContent = live ? "(en vivo desde GitHub)" : "(copia local)";
   }
 
-  /* ================= Terminal ================= */
-  const body = $("#term-body");
-  const input = $("#term-input");
-  const hist = []; let hIdx = 0; let busy = false;
-  const sleep = (ms) => new Promise((r) => setTimeout(r, reduceMotion ? 0 : ms));
-  function print(html, cls) {
-    const div = document.createElement("div");
-    if (cls) div.className = cls;
-    div.innerHTML = html;
-    body.appendChild(div);
-    body.scrollTop = body.scrollHeight;
-    return div;
+  /* ============ router ============ */
+  function parse() {
+    const h = (location.hash || "").replace(/^#\/?/, "");
+    const parts = h.split("/").filter(Boolean).map(decodeURIComponent);
+    const sec = parts[0] || "inicio";
+    return { sec, id: parts[1] ? slug(parts[1]) : null, raw: parts[1] || null };
   }
-  async function typeCmd(cmd) {
-    const line = print(`<span class="c">$</span> `);
-    for (const ch of cmd) { line.innerHTML += esc(ch); await sleep(28 + Math.random() * 40); }
-  }
-  const PORTS = [
-    ["22/tcp", "open", "ssh", "contacto seguro", "#s6"],
-    ["80/tcp", "open", "http", "resumen ejecutivo", "#s1"],
-    ["443/tcp", "open", "https", "hallazgos", "#s3"],
-    ["445/tcp", "open", "smb", "informes CVE", "#annex-c"],
-    ["1337/tcp", "open", "htb", "HackTheBox", "#annex-a"],
-    ["8600/tcp", "open", "cyberwar", "IA attack-defense", "#SAR-004"],
-    ["9418/tcp", "open", "git", "repos GitHub", "#annex-c"],
-    ["27124/tcp", "open", "obsidian", "vault de estudio", "#annex-b"]
-  ];
-  async function nmap() {
-    await typeCmd("nmap -sV -sC -p- inaki.sarobe");
-    await sleep(250);
-    print(`<span class="d">Starting Nmap 7.95 ( https://nmap.org ) at ${P.reportDate} ART</span>`);
-    await sleep(500);
-    print(`Nmap scan report for <b>inaki.sarobe</b> (La Plata, AR)`);
-    print(`Host is up (0.0042s latency). <span class="o">Disponible para trabajar.</span>`);
-    print(`<span class="d">PORT      STATE SERVICE  VERSION</span>`);
-    for (const [port, st, svc, ver, href] of PORTS) {
-      await sleep(160);
-      print(`<a class="port" href="${href}">${port.padEnd(9)}</a> <span class="o">${st}</span>  ${svc.padEnd(8)} <span class="d">${ver}</span>`);
-    }
-    await sleep(200);
-    print(`<span class="d">Service Info: OS: Linux; Device: estudiante UTN FRLP</span>`);
-    const since = new Date("2024-03-01"), now = new Date(P.reportDate);
-    const yrs = ((now - since) / (365.25 * 864e5)).toFixed(1);
-    print(`Nmap done: 1 IP address (1 host up) scanned in <span class="w">${yrs} años</span>`);
-    print(`<span class="d">Hacé clic en un puerto o escribí </span><span class="c">help</span><span class="d">.</span>`);
-  }
-  const CMDS = {
-    help() {
-      print(`<span class="d">comandos disponibles:</span>
-  <span class="c">whoami</span>          quién es el objetivo
-  <span class="c">nmap</span>            re-escanear al objetivo
-  <span class="c">ls</span>              contenido del informe
-  <span class="c">findings</span>        listar hallazgos
-  <span class="c">htb</span>             evidencia en HackTheBox
-  <span class="c">vault</span>           abrir el cuaderno de Obsidian
-  <span class="c">cv</span>              descargar el CV
-  <span class="c">open</span> &lt;x&gt;        linkedin | github | htb | mail
-  <span class="c">sudo contratar</span>  remediar el riesgo
-  <span class="c">clear</span>           limpiar pantalla`);
-    },
-    whoami() {
-      print(`visitante <span class="d">(vos)</span>
-<span class="d">objetivo:</span> <b>${esc(P.name)}</b> <span class="d">· ${esc(P.handle)} en HTB</span>
-<span class="d">rol:</span>      ${esc(P.headline)}
-<span class="d">lab:</span>      LINES / LINSI · UTN FRLP
-<span class="d">loc:</span>      ${esc(P.location)}`);
-    },
-    nmap,
-    ls() {
-      print(`<span class="i">hallazgos/</span>  <span class="i">htb/</span>  <span class="i">obsidian-vault/</span>  <span class="i">github/</span>  resumen.md  bitacora.log  <span class="o">cv_es.pdf</span>  <span class="o">cv_en.pdf</span>  <span class="r">flag.txt</span>`);
-    },
-    findings() {
-      const col = { critica: "r", alta: "w", media: "w", baja: "o", info: "i" };
-      print(P.findings.map((f) => `<a href="#${f.id}">${f.id}</a>  <span class="${col[f.sev]}">${SEV[f.sev].toUpperCase().padEnd(8)}</span> ${f.score.toFixed(1)}  ${esc(f.title)}`).join("\n"));
-    },
-    htb() {
-      const h = P.htb;
-      const sp = h.startingPoint.reduce((n, t) => n + t.boxes.filter((b) => b[1] === 100).length, 0);
-      print(`${esc(P.handle)} · nivel ${h.level}
-${h.machines.map((m) => `  ${m.status === "owned" ? '<span class="c">[pwned]</span>' : '<span class="r">[embargo]</span>'} ${esc(m.name).padEnd(11)} ${esc(m.os)} · ${esc(m.diff)}`).join("\n")}
-  <span class="c">[sp]</span>     Starting Point: ${sp} completas
-<a href="#annex-a">→ ver anexo A</a>`);
-    },
-    vault() {
-      const V = window.VAULT;
-      print(V ? `vault "${esc(V.vaultName)}": ${V.notes.length} notas sincronizadas. <a href="#annex-b">→ abrir anexo B</a>` : `vault no sincronizado todavía.`);
-      document.getElementById("annex-b").scrollIntoView();
-    },
-    cv() {
-      print(`<a href="${P.links.cvEs}" download>cv_es.pdf</a>   <a href="${P.links.cvEn}" download>cv_en.pdf</a>`);
-    },
-    open(arg) {
-      const map = { linkedin: P.links.linkedin, github: P.links.github, htb: P.links.htb, mail: `mailto:${P.email}`, email: `mailto:${P.email}`, cv: P.links.cvEs };
-      const url = map[(arg || "").toLowerCase()];
-      if (!url) return print(`uso: open linkedin | github | htb | mail | cv`, "w");
-      print(`abriendo <a href="${url}" target="_blank" rel="noopener">${esc(url)}</a>…`);
-      window.open(url, "_blank", "noopener");
-    },
-    clear() { body.innerHTML = ""; },
-    exit() { print(`No hay salida: ya estás adentro del informe.`, "w"); },
-    flag() { print(`cat: flag.txt: Permiso denegado. Las flags se ganan. Pista: F12.`, "r"); },
-    async contratar() {
-      print(`[sudo] contraseña para visitante: `);
-      await sleep(500);
-      const l = body.lastChild;
-      for (let i = 0; i < 8; i++) { l.innerHTML += "•"; await sleep(90); }
-      await sleep(300);
-      print(`<span class="c">Acceso concedido.</span> Ejecutando remediación…`);
-      await sleep(500);
-      document.getElementById("s6").scrollIntoView();
-    }
-  };
-  CMDS.cat = (arg) => (/flag/.test(arg || "") ? CMDS.flag() : /cv/.test(arg || "") ? CMDS.cv() : /hallazgos|findings/.test(arg || "") ? CMDS.findings() : print(`cat: ${esc(arg || "")}: no existe`, "r"));
-  CMDS.obsidian = CMDS.vault;
-  CMDS.hallazgos = CMDS.findings;
-  CMDS.contacto = CMDS.contratar;
-
-  async function run(raw) {
-    const line = raw.trim();
-    print(`<span class="c">$</span> ${esc(line)}`);
-    if (!line) return;
-    const [cmd, ...rest] = line.split(/\s+/);
-    const arg = rest.join(" ");
-    const c = cmd.toLowerCase();
-    if (c === "sudo") {
-      if (/contrat|hire/.test(arg)) return CMDS.contratar();
-      return print(`visitante no está en el archivo sudoers. Este incidente será reportado.`, "r");
-    }
-    if (c === "rm" && /-rf/.test(arg)) return print(`Buen intento. Quedó registrado como SAR-999: crítico, autor el visitante.`, "r");
-    const fn = CMDS[c];
-    if (fn) return fn(arg);
-    print(`${esc(cmd)}: comando no encontrado. Probá <span class="c">help</span>.`, "d");
+  function render() {
+    stopGraph();
+    const { sec, raw } = parse();
+    const fn = Views[sec];
+    if (!fn) { view.innerHTML = notFound(); setActive(""); }
+    else { view.innerHTML = fn(raw ? slug(raw) : null); setActive(sec); }
+    document.title = (sec === "inicio" ? "Iñaki Sarobe" : SECTIONS.find((s) => s.id === sec)?.label + " · Iñaki Sarobe") || "Iñaki Sarobe";
+    view.scrollTop = 0; window.scrollTo(0, 0);
+    closeMenu();
+    if (sec === "proyectos" && !raw) loadRepos();
+    if (sec === "notas" && !raw) requestAnimationFrame(mountGraph);
+    try { view.focus({ preventScroll: true }); } catch (_) {}
   }
 
-  $("#term-form").addEventListener("submit", async (e) => {
-    e.preventDefault();
-    if (busy) return;
-    const v = input.value; input.value = "";
-    if (v.trim()) { hist.push(v); hIdx = hist.length; }
-    busy = true; try { await run(v); } finally { busy = false; }
+  /* ============ menú móvil ============ */
+  const side = $("#side"), scrim = $("#scrim");
+  function openMenu() { side.classList.add("open"); scrim.hidden = false; $("#menu-btn").setAttribute("aria-expanded", "true"); }
+  function closeMenu() { side.classList.remove("open"); scrim.hidden = true; $("#menu-btn").setAttribute("aria-expanded", "false"); }
+  $("#menu-btn").addEventListener("click", () => side.classList.contains("open") ? closeMenu() : openMenu());
+  scrim.addEventListener("click", closeMenu);
+
+  /* ============ paleta de comandos (Ctrl K) ============ */
+  const palette = $("#palette"), pInput = $("#palette-input"), pList = $("#palette-list");
+  let pItems = [], pSel = 0;
+  function cmdIndex() {
+    const items = SECTIONS.map((s) => ({ label: s.label, hint: "sección", route: "#/" + s.id }));
+    (P.htb && P.htb.machines || []).forEach((m) => items.push({ label: m.name, hint: "CTF", route: "#/htb/" + slug(m.name) }));
+    vulnNotes().forEach((n) => items.push({ label: n.id, hint: "CVE", route: "#/vuln/" + slug(n.id) }));
+    (P.projects || []).forEach((p) => items.push({ label: p.name, hint: "proyecto", route: "#/proyectos/" + slug(p.name) }));
+    items.push({ label: "Descargar CV", hint: "archivo", route: (P.links || {}).cvEs, dl: true });
+    return items;
+  }
+  const ALL = cmdIndex();
+  function openPalette() { palette.hidden = false; pInput.value = ""; filterP(""); pInput.focus(); }
+  function closePalette() { palette.hidden = true; }
+  function filterP(q) {
+    q = q.toLowerCase().trim();
+    pItems = (q ? ALL.filter((i) => i.label.toLowerCase().includes(q) || i.hint.includes(q)) : ALL).slice(0, 9);
+    pSel = 0; drawP();
+  }
+  function drawP() {
+    pList.innerHTML = pItems.map((i, k) => `<li class="${k === pSel ? "sel" : ""}" data-k="${k}"><span>${esc(i.label)}</span><em>${esc(i.hint)}</em></li>`).join("")
+      || `<li class="mutxt">Sin resultados</li>`;
+  }
+  function goP(i) { if (!i) return; closePalette(); if (i.dl) { const a = document.createElement("a"); a.href = i.route; a.download = ""; a.click(); } else location.hash = i.route; }
+  pInput && pInput.addEventListener("input", () => filterP(pInput.value));
+  pInput && pInput.addEventListener("keydown", (e) => {
+    if (e.key === "ArrowDown") { pSel = Math.min(pSel + 1, pItems.length - 1); drawP(); e.preventDefault(); }
+    else if (e.key === "ArrowUp") { pSel = Math.max(pSel - 1, 0); drawP(); e.preventDefault(); }
+    else if (e.key === "Enter") { goP(pItems[pSel]); }
+    else if (e.key === "Escape") { closePalette(); }
   });
-  input.addEventListener("keydown", (e) => {
-    if (e.key === "ArrowUp" && hIdx > 0) { input.value = hist[--hIdx]; e.preventDefault(); }
-    if (e.key === "ArrowDown") { hIdx = Math.min(hist.length, hIdx + 1); input.value = hist[hIdx] || ""; e.preventDefault(); }
+  pList && pList.addEventListener("click", (e) => { const li = e.target.closest("li[data-k]"); if (li) goP(pItems[+li.dataset.k]); });
+  palette && palette.addEventListener("click", (e) => { if (e.target === palette) closePalette(); });
+  document.addEventListener("keydown", (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") { e.preventDefault(); palette.hidden ? openPalette() : closePalette(); }
   });
-  $("#term").addEventListener("click", (e) => { if (!e.target.closest("a")) input.focus({ preventScroll: true }); });
+  $("#cmd-btn") && $("#cmd-btn").addEventListener("click", openPalette);
+  $("#cmd-btn-m") && $("#cmd-btn-m").addEventListener("click", openPalette);
 
-  /* ================= UI: reveal + nav activa ================= */
-  function setupObservers() {
-    document.querySelectorAll(".sec__head, .prose, .tldr, .kpi, .phases, .lsla, .vault, .remed__box, .htb-head").forEach((el) => el.classList.add("reveal"));
-    if (!("IntersectionObserver" in window) || reduceMotion) {
-      document.querySelectorAll(".reveal").forEach((el) => el.classList.add("in"));
-      return;
+  /* ============ grafo de Obsidian (vista Notas) ============ */
+  const GTYPE = { maquina: "#9fef00", vulnerabilidad: "#ff3b6b", concepto: "#4cc9f0", herramienta: "#ffd23f", curso: "#b39dff", nota: "#dbe3dd", tag: "#8a7be0", mitre: "#ff8a3d", cwe: "#e0b84c", ghost: "#55605a", redacted: "#ff3b6b" };
+  const GLBL = { maquina: "máquina", vulnerabilidad: "vulnerabilidad", concepto: "concepto", herramienta: "herramienta", curso: "curso", tag: "#tag", mitre: "ATT&CK", cwe: "CWE", nota: "nota", ghost: "sin crear", redacted: "embargada" };
+  let rafId = null, graphRO = null;
+  function stopGraph() { if (rafId) { cancelAnimationFrame(rafId); rafId = null; } if (graphRO) { graphRO.disconnect(); graphRO = null; } }
+  function mountGraph() {
+    const canvas = document.getElementById("graph"); if (!canvas || !noteList.length) return;
+    const nodes = [], edges = [], index = new Map();
+    const add = (id, label, type, note) => { if (index.has(id)) return index.get(id); const a = Math.random() * 6.2832, r = 60 + Math.random() * 120; const n = { id, label, type, note, x: Math.cos(a) * r, y: Math.sin(a) * r, vx: 0, vy: 0, deg: 0 }; index.set(id, n); nodes.push(n); return n; };
+    const link = (a, b) => { if (!a || !b || a === b) return; if (edges.some((e) => (e.a === a && e.b === b) || (e.a === b && e.b === a))) return; edges.push({ a, b }); a.deg++; b.deg++; };
+    noteList.forEach((n) => add("n:" + n.id.toLowerCase(), n.title, noteType(n), n));
+    noteList.forEach((n) => {
+      const src = index.get("n:" + n.id.toLowerCase());
+      (n.links || []).forEach((t) => { const tgt = byId.get(t.toLowerCase()); link(src, tgt ? index.get("n:" + t.toLowerCase()) : add("g:" + t.toLowerCase(), t, "ghost")); });
+      (n.tags || []).forEach((t) => link(src, add("t:" + t.toLowerCase(), "#" + t, "tag")));
+      const mi = n.props && n.props.mitre; (Array.isArray(mi) ? mi : mi ? [mi] : []).forEach((m) => link(src, add("m:" + m, "ATT&CK " + m, "mitre")));
+      const cw = n.props && n.props.cwe; (Array.isArray(cw) ? cw : cw ? [cw] : []).forEach((c) => link(src, add("c:" + c, String(c), "cwe")));
+    });
+    noteList.filter((n) => n.embargo && n.hiddenLinks > 0).forEach((n) => { const src = index.get("n:" + n.id.toLowerCase()); for (let i = 0; i < n.hiddenLinks; i++) { const x = add("x:" + n.id.toLowerCase() + ":" + i, "████", "redacted"); x.owner = n.id; link(src, x); } });
+
+    const stats = document.getElementById("vstats"); if (stats) stats.textContent = `${noteList.length} notas · ${edges.length} enlaces · ${nodes.length} nodos`;
+    const legend = document.getElementById("vlegend"); if (legend) { const used = [...new Set(nodes.map((n) => n.type))]; legend.innerHTML = used.map((t) => `<span><i style="background:${GTYPE[t]}"></i>${GLBL[t] || t}</span>`).join(""); }
+
+    const ctx = canvas.getContext("2d"); let W = 0, H = 0, DPR = 1, hover = null, drag = null, moved = false, alpha = 1;
+    const radius = (n) => (n.note ? 7 + Math.min(n.deg, 8) * 1.1 : n.type === "ghost" || n.type === "redacted" ? 4.5 : 4.5 + Math.min(n.deg, 5) * 0.6);
+    function resize() { const r = canvas.getBoundingClientRect(); DPR = Math.min(devicePixelRatio || 1, 2); W = r.width; H = r.height; canvas.width = W * DPR; canvas.height = H * DPR; ctx.setTransform(DPR, 0, 0, DPR, 0, 0); }
+    const toScreen = (n) => [n.x + W / 2, n.y + H / 2];
+    function step() {
+      for (let i = 0; i < nodes.length; i++) { const a = nodes[i]; for (let j = i + 1; j < nodes.length; j++) { const b = nodes[j]; let dx = a.x - b.x, dy = a.y - b.y, d2 = dx * dx + dy * dy || 0.01; if (d2 < 40000) { const d = Math.sqrt(d2), f = 600 / d2; dx /= d; dy /= d; a.vx += dx * f; a.vy += dy * f; b.vx -= dx * f; b.vy -= dy * f; } } }
+      edges.forEach(({ a, b }) => { let dx = b.x - a.x, dy = b.y - a.y, d = Math.sqrt(dx * dx + dy * dy) || 0.01; const f = (d - 72) * 0.01; dx /= d; dy /= d; a.vx += dx * f; a.vy += dy * f; b.vx -= dx * f; b.vy -= dy * f; });
+      nodes.forEach((n) => { n.vx -= n.x * 0.0022; n.vy -= n.y * 0.0022; if (n === drag) return; n.x += (n.vx *= 0.82); n.y += (n.vy *= 0.82); });
+      alpha *= 0.99;
     }
-    const io = new IntersectionObserver((ents) => ents.forEach((en) => { if (en.isIntersecting) { en.target.classList.add("in"); io.unobserve(en.target); } }), { rootMargin: "0px 0px -8% 0px" });
-    document.querySelectorAll(".reveal").forEach((el) => io.observe(el));
-
-    const links = [...document.querySelectorAll(".runhead__nav a")];
-    const nio = new IntersectionObserver((ents) => ents.forEach((en) => {
-      if (en.isIntersecting) links.forEach((a) => a.classList.toggle("active", a.getAttribute("href") === "#" + en.target.id));
-    }), { rootMargin: "-45% 0px -50% 0px" });
-    document.querySelectorAll("main > section[id]").forEach((s) => nio.observe(s));
+    const nb = new Set();
+    function draw() {
+      ctx.clearRect(0, 0, W, H);
+      const focus = drag || hover; nb.clear(); if (focus) edges.forEach((e) => { if (e.a === focus) nb.add(e.b); if (e.b === focus) nb.add(e.a); });
+      edges.forEach(({ a, b }) => { const on = focus && (a === focus || b === focus); ctx.strokeStyle = on ? "rgba(159,239,0,.6)" : focus ? "rgba(120,140,130,.1)" : "rgba(120,140,130,.28)"; ctx.lineWidth = on ? 1.6 : 1; const [x1, y1] = toScreen(a), [x2, y2] = toScreen(b); ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke(); });
+      nodes.forEach((n) => {
+        const [x, y] = toScreen(n), r = radius(n), dim = focus && n !== focus && !nb.has(n), col = GTYPE[n.type] || "#888";
+        ctx.globalAlpha = dim ? 0.25 : 1; ctx.beginPath(); ctx.arc(x, y, r, 0, 6.2832);
+        if (n.type === "ghost") { ctx.strokeStyle = col; ctx.lineWidth = 1.5; ctx.stroke(); } else { ctx.fillStyle = col; ctx.fill(); }
+        if (n.type === "redacted") { ctx.fillStyle = "#000"; ctx.fillRect(x - r * 0.7, y - 1.5, r * 1.4, 3); }
+        if (n.note || n === hover || nb.has(n) || n.type === "mitre" || n.type === "cwe" || n.type === "redacted") {
+          ctx.font = `${n.note ? 600 : 500} ${n.note ? 12 : 11}px "IBM Plex Mono", monospace`; ctx.textAlign = "center"; ctx.fillStyle = n.note ? "#e9efe9" : "#9aa79f"; ctx.fillText(n.label, x, y + r + 13);
+        }
+        ctx.globalAlpha = 1;
+      });
+    }
+    function loop() { if (alpha > 0.02 || drag) step(); draw(); rafId = requestAnimationFrame(loop); }
+    function pick(ev) { const r = canvas.getBoundingClientRect(); const mx = ev.clientX - r.left, my = ev.clientY - r.top; let best = null, bd = 1e9; nodes.forEach((n) => { const [x, y] = toScreen(n); const d = Math.hypot(x - mx, y - my); if (d < radius(n) + 8 && d < bd) { bd = d; best = n; } }); return { n: best, mx, my }; }
+    canvas.onpointerdown = (e) => { const { n } = pick(e); if (!n) return; drag = n; moved = false; canvas.setPointerCapture(e.pointerId); canvas.classList.add("dragging"); };
+    canvas.onpointermove = (e) => { const { n, mx, my } = pick(e); if (drag) { drag.x = mx - W / 2; drag.y = my - H / 2; moved = true; alpha = Math.max(alpha, 0.4); } else { hover = n; canvas.style.cursor = n ? "pointer" : "grab"; } };
+    const end = () => { if (drag && !moved) { const o = drag.owner || (drag.note && drag.note.id); const route = o && routeForName(o); if (route) location.hash = route; } drag = null; canvas.classList.remove("dragging"); };
+    canvas.onpointerup = end; canvas.onpointercancel = end; canvas.onpointerleave = () => { hover = null; };
+    resize(); for (let i = 0; i < 220; i++) step(); alpha = 0.26; loop();
+    graphRO = new ResizeObserver(resize); graphRO.observe(canvas);
   }
 
-  /* ================= Easter egg para quien abre DevTools ================= */
-  function consoleFlag() {
-    const f = ["SAROBE{", "r3c0n_", "3s_l4_", "m1t4d_", "d3l_", "tr4b4j0", "}"].join("");
-    console.log("%c ENG-2026-ISAR %c Mirar el código fuente ya cuenta como reconocimiento.", "background:#9fef00;color:#000;font-weight:700;padding:3px 6px;border-radius:3px", "color:#9fef00");
-    console.log("%cflag → " + f, "color:#ff3b6b;font-family:monospace");
-    console.log("%cMandámela por mail con el asunto \"flag\" y te debo un café ☕ → " + P.email, "color:#b4bfb8");
+  /* ============ lightbox (zoom de imágenes) ============ */
+  let lb = null, lbImg, lbCap, lbList = [], lbIdx = 0;
+  function ensureLb() {
+    if (lb) return;
+    lb = document.createElement("div"); lb.className = "lightbox"; lb.hidden = true;
+    lb.innerHTML = '<button class="lb-btn lb-prev" aria-label="Anterior">‹</button><img alt=""><button class="lb-btn lb-next" aria-label="Siguiente">›</button><button class="lb-btn lb-close" aria-label="Cerrar">✕</button><div class="lb-cap"></div>';
+    document.body.appendChild(lb);
+    lbImg = lb.querySelector("img"); lbCap = lb.querySelector(".lb-cap");
+    lb.addEventListener("click", (e) => { if (e.target.closest(".lb-close")) return closeLb(); if (e.target.closest(".lb-prev")) return showLb(lbIdx - 1); if (e.target.closest(".lb-next")) return showLb(lbIdx + 1); if (e.target === lb) closeLb(); });
+    document.addEventListener("keydown", (e) => { if (lb.hidden) return; if (e.key === "Escape") closeLb(); else if (e.key === "ArrowLeft") showLb(lbIdx - 1); else if (e.key === "ArrowRight") showLb(lbIdx + 1); });
   }
+  function showLb(i) { if (!lbList.length) return; lbIdx = (i + lbList.length) % lbList.length; const s = lbList[lbIdx]; lbImg.src = s.currentSrc || s.src; lbCap.textContent = (lbIdx + 1) + " / " + lbList.length; const multi = lbList.length > 1; lb.querySelector(".lb-prev").style.display = lb.querySelector(".lb-next").style.display = multi ? "" : "none"; }
+  function closeLb() { if (lb) { lb.hidden = true; document.body.classList.remove("lb-open"); lbImg.src = ""; } }
+  view.addEventListener("click", (e) => { const img = e.target.closest(".md img"); if (!img) return; ensureLb(); lbList = [...view.querySelectorAll(".md img")]; showLb(Math.max(0, lbList.indexOf(img))); lb.hidden = false; document.body.classList.add("lb-open"); });
 
-  /* ================= §1 "Trabajando ahora" ================= */
-  function renderNow() {
-    const n = P.now, box = $("#now");
-    if (!n || !box) return;
-    box.innerHTML = `<div class="now__head"><span class="now__dot" aria-hidden="true"></span>${esc(n.label)}${n.updated ? ` <span class="now__date">· ${esc(n.updated)}</span>` : ""}</div>
-      <ul class="now__list">${n.items.map((it) => `<li>${it}</li>`).join("")}</ul>`;
-  }
-
-  /* ================= init ================= */
-  document.getElementById("report-date").textContent = P.reportDate;
-  renderNow();
-  renderFindings();
-  renderTimeline();
-  renderArsenal();
-  renderHTB();
-  renderProjects();
-  loadReports();
-  loadRepos();
-  setupObservers();
-  consoleFlag();
-  (async () => { busy = true; try { await nmap(); } finally { busy = false; } })();
+  /* ============ init ============ */
+  buildSidebar();
+  window.addEventListener("hashchange", render);
+  function boot() { if (!location.hash) location.replace("#/inicio"); render(); }
+  if (window.marked || !document.querySelector('script[src*="marked"]')) boot();
+  else window.addEventListener("load", boot, { once: true });
 })();
