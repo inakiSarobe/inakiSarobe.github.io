@@ -193,7 +193,7 @@ body::before { display: none; }
 
 /* grafo de Obsidian (Notas) */
 .vault { margin: 10px 0 28px; }
-.vault__graph { position: relative; border: 1px solid var(--line); border-radius: 12px; background: #080a09; overflow: hidden; }
+.vault__graph { position: relative; border: 1px solid var(--line); border-radius: 12px; background: #080a09; overflow: hidden; max-width: none; width: calc(100vw - 272px - 32px); margin-left: calc(16px - clamp(20px, 5vw, 56px)); }
 .vault__toolbar { position: absolute; top: 10px; left: 12px; right: 12px; display: flex; justify-content: space-between; gap: 10px; z-index: 2; pointer-events: none; flex-wrap: wrap; }
 #vstats { font: 11px/1.4 var(--mono); color: var(--muted); }
 .legend { display: flex; flex-wrap: wrap; gap: 8px 10px; justify-content: flex-end; }
@@ -222,6 +222,7 @@ body.lb-open { overflow: hidden; }
   .side { transform: translateX(-100%); transition: transform .2s; box-shadow: 0 0 40px #000c; width: min(300px, 86vw); }
   .side.open { transform: none; }
   .view { margin-left: 0; padding: 24px 18px 80px; }
+  .vault__graph { width: auto; margin-left: 0; }
   #graph { height: 340px; }
   .lb-nav { width: 40px; height: 54px; font-size: 26px; }
   .lb-prev { left: 8px; } .lb-next { right: 8px; }

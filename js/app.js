@@ -470,8 +470,8 @@
   $("#cmd-btn-m") && $("#cmd-btn-m").addEventListener("click", openPalette);
 
   /* ============ grafo de Obsidian (vista Notas) ============ */
-  const GTYPE = { maquina: "#9fef00", vulnerabilidad: "#ff3b6b", concepto: "#4cc9f0", herramienta: "#ffd23f", curso: "#b39dff", nota: "#dbe3dd", tag: "#8a7be0", mitre: "#ff8a3d", cwe: "#e0b84c", ghost: "#55605a", redacted: "#ff3b6b" };
-  const GLBL = { maquina: "máquina", vulnerabilidad: "vulnerabilidad", concepto: "concepto", herramienta: "herramienta", curso: "curso", tag: "#tag", mitre: "ATT&CK", cwe: "CWE", nota: "nota", ghost: "sin crear", redacted: "embargada" };
+  const GTYPE = { maquina: "#9fef00", vulnerabilidad: "#ff3b6b", puerto: "#8f9a92", concepto: "#4cc9f0", herramienta: "#ffd23f", curso: "#b39dff", nota: "#dbe3dd", tag: "#8a7be0", mitre: "#ff8a3d", cwe: "#e0b84c", ghost: "#55605a", redacted: "#ff3b6b" };
+  const GLBL = { maquina: "máquina", vulnerabilidad: "vulnerabilidad", puerto: "puerto", concepto: "concepto", herramienta: "herramienta", curso: "curso", tag: "#tag", mitre: "ATT&CK", cwe: "CWE", nota: "nota", ghost: "sin crear", redacted: "embargada" };
   let rafId = null, graphRO = null;
   function stopGraph() { if (rafId) { cancelAnimationFrame(rafId); rafId = null; } if (graphRO) { graphRO.disconnect(); graphRO = null; } }
   function mountGraph() {
@@ -479,15 +479,16 @@
     const nodes = [], edges = [], index = new Map();
     const add = (id, label, type, note) => { if (index.has(id)) return index.get(id); const a = Math.random() * 6.2832, r = 60 + Math.random() * 120; const n = { id, label, type, note, x: Math.cos(a) * r, y: Math.sin(a) * r, vx: 0, vy: 0, deg: 0 }; index.set(id, n); nodes.push(n); return n; };
     const link = (a, b) => { if (!a || !b || a === b) return; if (edges.some((e) => (e.a === a && e.b === b) || (e.a === b && e.b === a))) return; edges.push({ a, b }); a.deg++; b.deg++; };
-    noteList.forEach((n) => add("n:" + n.id.toLowerCase(), n.title, noteType(n), n));
+    // Tipos que NO van al grafo (pedido): índice, #tags, "sin crear" (ghost),
+    // ATT&CK (mitre) y CWE. Solo quedan las notas reales y sus enlaces entre sí.
+    const HIDE_NOTE = new Set(["indice", "índice"]);
+    noteList.forEach((n) => { const t = noteType(n); if (!HIDE_NOTE.has(t)) add("n:" + n.id.toLowerCase(), n.title, t, n); });
     noteList.forEach((n) => {
-      const src = index.get("n:" + n.id.toLowerCase());
-      (n.links || []).forEach((t) => { const tgt = byId.get(t.toLowerCase()); link(src, tgt ? index.get("n:" + t.toLowerCase()) : add("g:" + t.toLowerCase(), t, "ghost")); });
-      (n.tags || []).forEach((t) => link(src, add("t:" + t.toLowerCase(), "#" + t, "tag")));
-      const mi = n.props && n.props.mitre; (Array.isArray(mi) ? mi : mi ? [mi] : []).forEach((m) => link(src, add("m:" + m, "ATT&CK " + m, "mitre")));
-      const cw = n.props && n.props.cwe; (Array.isArray(cw) ? cw : cw ? [cw] : []).forEach((c) => link(src, add("c:" + c, String(c), "cwe")));
+      const src = index.get("n:" + n.id.toLowerCase()); if (!src) return;
+      (n.links || []).forEach((t) => { const tgt = index.get("n:" + t.toLowerCase()); if (tgt && !(src.type === "puerto" && tgt.type === "puerto")) link(src, tgt); });
     });
-    noteList.filter((n) => n.embargo && n.hiddenLinks > 0).forEach((n) => { const src = index.get("n:" + n.id.toLowerCase()); for (let i = 0; i < n.hiddenLinks; i++) { const x = add("x:" + n.id.toLowerCase() + ":" + i, "████", "redacted"); x.owner = n.id; link(src, x); } });
+    // Sacar los nodos que quedaron sin conexiones (p. ej. puertos sueltos al quitar el índice)
+    for (let i = nodes.length - 1; i >= 0; i--) if (nodes[i].deg === 0) { index.delete(nodes[i].id); nodes.splice(i, 1); }
 
     const stats = document.getElementById("vstats"); if (stats) stats.textContent = `${noteList.length} notas · ${edges.length} enlaces · ${nodes.length} nodos`;
     const legend = document.getElementById("vlegend"); if (legend) { const used = [...new Set(nodes.map((n) => n.type))]; legend.innerHTML = used.map((t) => `<span><i style="background:${GTYPE[t]}"></i>${GLBL[t] || t}</span>`).join(""); }
