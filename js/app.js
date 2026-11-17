@@ -182,17 +182,32 @@
       </article>`).join("")}</div>`;
 
   /* ---- HackTheBox ---- */
-  // Puertos atacados en una máquina: notas tipo "puerto" que enlazan a la
-  // máquina (o que su writeup enlaza), ordenadas por número de puerto.
-  function machinePorts(m, note) {
-    const want = slug(m.name); const out = new Map();
-    noteList.forEach((n) => {
-      if (!n.props || n.props.tipo !== "puerto") return;
-      const linksMachine = (n.links || []).some((l) => slug(l) === want);
-      const inWriteup = note && (note.links || []).some((l) => l.toLowerCase() === n.id.toLowerCase());
-      if (linksMachine || inWriteup) out.set(n.id, n);
+  // Puertos / herramientas de una máquina: notas de ese tipo que enlazan a la
+  // máquina, o que el writeup de la máquina enlaza (fuente: la nota de Obsidian).
+  function machineLinked(m, note, tipo) {
+    const want = slug(m.name); const seen = new Set(); const out = [];
+    // 1) en el orden en que la propia nota de la máquina las enlaza
+    if (note) (note.links || []).forEach((l) => {
+      const n = byId.get(l.toLowerCase());
+      if (n && n.props && n.props.tipo === tipo && !seen.has(n.id)) { seen.add(n.id); out.push(n); }
     });
-    return [...out.values()].sort((a, b) => (parseInt(a.props.puerto) || 0) - (parseInt(b.props.puerto) || 0));
+    // 2) notas de ese tipo que enlazan a la máquina pero el writeup no listó
+    noteList.forEach((n) => {
+      if (n.props && n.props.tipo === tipo && !seen.has(n.id) && (n.links || []).some((l) => slug(l) === want)) { seen.add(n.id); out.push(n); }
+    });
+    return out;
+  }
+  // Las secciones de resumen (Puertos atacados / Herramientas usadas) se muestran
+  // como chips arriba; se quitan del cuerpo del writeup para no duplicarlas.
+  function stripMachineSections(md) {
+    const drop = ["puertos atacados", "herramientas usadas", "puertos relevantes"];
+    const out = []; let skip = false;
+    String(md).split("\n").forEach((l) => {
+      const h = l.match(/^#{1,6}\s+(.*?)\s*$/);
+      if (h) skip = drop.includes(h[1].trim().toLowerCase());
+      if (!skip) out.push(l);
+    });
+    return out.join("\n");
   }
   Views.htb = (id) => {
     const h = P.htb || {}; const machines = h.machines || [];
@@ -201,13 +216,19 @@
       if (!m) return notFound();
       const note = byId.get(m.name.toLowerCase());
       const owned = m.status === "owned";
-      const ports = machinePorts(m, note);
+      const ports = machineLinked(m, note, "puerto")
+        .sort((a, b) => (parseInt(a.props.puerto) || 0) - (parseInt(b.props.puerto) || 0));
+      const tools = machineLinked(m, note, "herramienta");
       const portsHtml = ports.length
         ? `<div class="m-ports"><span class="m-ports__h">Puertos atacados</span><div class="ports">${ports.map((n) =>
             `<a class="port" href="#/notas/${slug(n.id)}"><b>${esc(n.props.puerto)}/${esc(n.props.protocolo || "tcp")}</b> ${esc(n.props.servicio || n.title)}</a>`).join("")}</div></div>`
         : "";
+      const toolsHtml = tools.length
+        ? `<div class="m-ports m-tools"><span class="m-ports__h">Herramientas</span><div class="ports">${tools.map((n) =>
+            `<a class="port tool" href="#/notas/${slug(n.id)}">${esc(n.title)}</a>`).join("")}</div></div>`
+        : "";
       const writeup = note && !note.embargo && note.body
-        ? `<div class="md">${renderMd(note.body)}</div>`
+        ? `<div class="md">${renderMd(stripMachineSections(note.body))}</div>`
         : (m.status === "active"
           ? `<div class="embargo-card"><b>RESOLUCIÓN EMBARGADA</b><p>Es una máquina activa de la plataforma (HackTheBox). Por sus reglas, publico la resolución completa cuando se retire.</p></div>`
           : "");
@@ -217,6 +238,7 @@
       <div class="m-meta"><span>${esc(m.os)}</span>·<span>${esc(m.diff)}</span>·<span>${esc(m.when)}</span>
         <span class="m-flags"><i class="${owned ? "ok" : ""}">user</i><i class="${owned ? "ok" : ""}">root</i></span></div>
       ${portsHtml}
+      ${toolsHtml}
       <ul class="chain big">${(m.chain || []).map(([k, v]) => `<li><b>${esc(k)}</b><span>${esc(v)}</span></li>`).join("")}</ul>
       ${m.report ? `<a class="btn btn--ghost" href="${m.report}" target="_blank" rel="noopener">Informe técnico (PDF) ↗</a>` : ""}
       ${writeup}`;
