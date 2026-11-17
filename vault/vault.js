@@ -1,8 +1,38 @@
 /* Generado por tools/sync_vault.py — no editar a mano */
 window.VAULT = {
- "generated": "2026-11-16T21:53:23+00:00",
+ "generated": "2026-11-17T02:02:39+00:00",
  "vaultName": "Cybersecurity",
  "notes": [
+  {
+   "id": "TwoMillon",
+   "title": "TwoMillon",
+   "path": "03 Máquinas y CTF/TwoMillon.md",
+   "folder": "03 Máquinas y CTF",
+   "props": {
+    "tipo": "maquina",
+    "plataforma": "HackTheBox",
+    "dificultad": "fácil",
+    "so": "Linux",
+    "estado": "completado",
+    "tags": [
+     "ctf"
+    ],
+    "inicio": "2026-11-16",
+    "fin": "2026-11-16",
+    "retirada": true
+   },
+   "tags": [
+    "ctf"
+   ],
+   "links": [
+    "CVE-2023-0386",
+    "22 SSH",
+    "80 HTTP"
+   ],
+   "embargo": false,
+   "body": "## Resumen\n| User flag | Root flag | Vector inicial | Escalada |\n| --------- | --------- | --------------------------------------------------- | ---------------------------------------------- |\n| ✅ | ✅ | Bypass del código de invitación → *mass-assignment* a admin → inyección de comandos (RCE) en la API | [[CVE-2023-0386]] · OverlayFS/FUSE → root |\n\n**TwoMillon** (HackTheBox · Linux · Easy) es una recreación del portal antiguo de HackTheBox. El acceso inicial sale de encadenar tres fallos en la **web/API**: se *bypassea* el código de invitación, se abusa de un *mass-assignment* para convertirse en **admin** y, ya como admin, se explota una **inyección de comandos** en el endpoint que genera la VPN para conseguir ejecución remota como `www-data`. Con credenciales reutilizadas se entra por SSH como `admin` (user flag) y, finalmente, un kernel vulnerable a **[[CVE-2023-0386]]** (OverlayFS/FUSE) da **root**.\n\nPuertos relevantes: [[22 SSH]] y [[80 HTTP]].\n\n## 1. Reconocimiento\n```bash\nnmap -sC -sV -p- --min-rate 2000 -oN nmap.txt <IP>\n```\nEl objetivo expone **[[22 SSH]]** y **[[80 HTTP]]**. El sitio redirige a `2million.htb`, así que hay que añadir el dominio al `/etc/hosts` antes de seguir.\n\n## 2. Enumeración\n*Fuzzing* de rutas con gobuster sobre el dominio: aparecen `/invite`, `/register`, `/login`, `/api` y `/home`. La página `/invite` pide un **código de invitación** para poder registrarse.\n\n![[TwoMillon-1794853253786.webp]]\n\nConsultando la API sin autenticar se confirma que está viva y versionada:\n\n![[TwoMillon-1794854100710.webp]]\n\n## 3. Explotación (acceso inicial)\n\n### 3.1 Bypass del código de invitación\nEl JavaScript de `/invite` revela el endpoint para pedir instrucciones y generar un código. Un `POST` a `/api/v1/invite/generate` devuelve un código **codificado en base64**; al decodificarlo sale el código de invitación válido.\n\n![[TwoMillon-1794852923073.webp]]\n\n![[TwoMillon-1794852880096.webp]]\n\nCon ese código ya se puede completar el **registro** y hacer login:\n\n![[TwoMillon-1794853554439.webp]]\n\n### 3.2 Enumeración de la API y escalada a admin\nYa autenticado (con la cookie `PHPSESSID`), `GET /api/v1` lista todas las rutas, incluidas las de **admin**: `GET /api/v1/admin/auth`, `POST /api/v1/admin/vpn/generate` y `PUT /api/v1/admin/settings/update`.\n\n![[TwoMillon-1794853982726.webp]]\n\n![[TwoMillon-1794854122867.webp]]\n\n![[TwoMillon-1794854148502.webp]]\n\nEl endpoint `PUT /api/v1/admin/settings/update` **no valida qué campos puede tocar el usuario** (*mass-assignment* / BOLA). Enviando `is_admin: 1` en el cuerpo, la cuenta se convierte en administradora:\n\n```http\nPUT /api/v1/admin/settings/update\nContent-Type: application/json\nCookie: PHPSESSID=...\n\n{\"email\":\"hacked@gmail.com\", \"is_admin\": 1}\n```\n\n![[TwoMillon-1794854426069.webp]]\n\nSe comprueba el privilegio con `GET /api/v1/admin/auth` → `{\"message\": true}`:\n\n![[TwoMillon-1794854487599.webp]]\n\n### 3.3 Inyección de comandos (RCE)\nEl endpoint de admin `POST /api/v1/admin/vpn/generate` genera la configuración `.ovpn` pasando el `username` a un comando del sistema **sin sanear**. Primero una generación legítima para ver el comportamiento:\n\n![[TwoMillon-1794854640985.webp]]\n\nInyectando en el campo `username` se ejecutan comandos arbitrarios. `{\"username\":\"hacked;id;\"}` devuelve el `id` del servicio web → **`www-data`**:\n\n![[TwoMillon-1794854725221.webp]]\n\nDe ahí a una *reverse shell*: se envía un payload en base64 que se decodifica y ejecuta con bash en el objetivo.\n\n![[TwoMillon-1794854926621.webp]]\n\n![[TwoMillon-1794854944968.webp]]\n\n### 3.4 De www-data a admin (SSH + user flag)\nComo `www-data` se encuentran las **credenciales de la base de datos** en el archivo de configuración del sitio (`.env` en `/var/www/html`). El usuario **`admin`** reutiliza esa contraseña para SSH, así que se entra por **[[22 SSH]]** y se lee la *user flag*:\n\n![[TwoMillon-1794855916218.webp]]\n\n```\nuser.txt → ed800a57536d897ee1cee0349515355b\n```\n\n![[TwoMillon-1794855972566.webp]]\n\n## 4. Escalada de privilegios\nEn `/var/mail/admin` hay un correo que, como pista, menciona que falta **actualizar el SO** por CVEs de kernel recientes, señalando en concreto una en **OverlayFS / FUSE**:\n\n![[TwoMillon-1794856082149.webp]]\n\n### CVE-2023-0386\nVector: **[[CVE-2023-0386]]**. El kernel del host (Ubuntu 22.04, 5.15.70) es vulnerable al fallo de validación de metadatos de **OverlayFS**, que combinado con **FUSE** permite copiar un binario *setuid root* al *upperdir* y ejecutarlo como root. Se clona el PoC público (`xkaneiki/CVE-2023-0386`), se compila y se dispara. La causa raíz, el impacto y la mitigación están en la nota del CVE.\n\nSe sube el PoC al objetivo (`git clone` → `zip` → `scp` a `/tmp`):\n\n![[TwoMillon-1794856468488.webp]]\n\n![[TwoMillon-1794856486143.webp]]\n\n![[TwoMillon-1794857206671.webp]]\n\nSe compila con `make all`:\n\n![[TwoMillon-1794857475563.webp]]\n\nSe ejecuta el exploit (`./fuse ./ovlcap/lower ./gc &` y luego `./exp`) y se obtiene **shell de root**:\n\n![[TwoMillon-1794857601654.webp]]\n\n```\nroot.txt → fe8e3b1aaabbb0cd65f18b5ca54ff18c\n```\n\n![[TwoMillon-1794857768719.webp]]\n\n## 5. Lecciones aprendidas\n- **Leé siempre el JavaScript del cliente**: el bypass del código de invitación estaba en el JS de `/invite`, no en ningún parámetro oculto del servidor.\n- Un **endpoint de admin que confía en el cuerpo de la petición** (`is_admin`) convierte a cualquier usuario autenticado en administrador: es *mass-assignment* / BOLA, de los fallos más comunes en APIs.\n- **Nunca pasar entrada del usuario a un comando del sistema sin sanear**: el `username` de la VPN acababa en una shell. Validar y usar listas blancas / llamadas sin shell.\n- **Reutilización de credenciales**: la contraseña de la base de datos (`.env`) servía para SSH como `admin`. Credenciales distintas por servicio lo habrían cortado.\n- **Mantené el kernel parcheado**: un host sin actualizar cae con un PoC público ([[CVE-2023-0386]]). El propio correo del admin avisaba del riesgo.\n\n## Referencias\n- [[CVE-2023-0386]] — escalada de privilegios local en OverlayFS/FUSE (escalada a root).\n- [[22 SSH]] · [[80 HTTP]] — puertos del objetivo.\n- PoC utilizado: `xkaneiki/CVE-2023-0386` (GitHub).\n- HackTheBox · TwoMillion.\n",
+   "mtime": "2026-11-17T02:02:14.151534+00:00"
+  },
   {
    "id": "DoubleTake",
    "title": "DoubleTake",
@@ -138,32 +168,12 @@ window.VAULT = {
     "fuse",
     "privesc"
    ],
-   "links": [],
-   "embargo": false,
-   "body": "## Descripción\nEscalada de **privilegios local** en el kernel de Linux por un error en la validación de metadatos de **OverlayFS**. Afecta a kernels **5.11 – 6.1.8** (salvo correcciones posteriores como 5.15.91). Publicada en **enero de 2023**. Vista en la máquina <span class=\"embargo\" title=\"Máquina activa de HTB: embargada hasta su retiro\">████████</span> (HackTheBox) como vector de **escalada a root**.\n\nOverlayFS combina dos directorios en una sola vista: **`lowerdir`** (solo lectura) y **`upperdir`** (escribible). El fallo está en que el kernel **no valida correctamente los metadatos** de los archivos que vienen del `lowerdir`, permitiendo que un archivo con UID/GID falsificados y el bit **setuid** se copie al `upperdir` como si tuviera privilegios de root legítimos.\n\n## Causa raíz\n- Un atacante presenta un `lowerdir` manipulado (por ejemplo montado con **FUSE**) con archivos que declaran **UID 0, GID 0 y setuid activado**.\n- Al combinarlo con OverlayFS, el kernel **copia esos archivos al `upperdir` sin comprobar** si los metadatos (UID/GID) están mapeados en el *namespace* del usuario actual.\n- El resultado es un binario **efectivamente setuid root** controlado por el atacante.\n- Es un caso de **CWE-282 (Improper Ownership Management)**: se confía en metadatos de propiedad provenientes de un componente de menor privilegio.\n\n## Impacto\n- Un usuario local sin privilegios obtiene un binario **setuid root** y, al ejecutarlo, una **shell de root**.\n- Compromiso total del host a partir de una cuenta de usuario normal.\n- En <span class=\"embargo\" title=\"Máquina activa de HTB: embargada hasta su retiro\">████████</span> se usa para pasar del usuario `admin` a **root**.\n\n## Cómo se explota\nIdea general: usar **FUSE** para montar un `lowerdir` falso con un binario que declare UID 0, GID 0 y setuid; montar un OverlayFS que lo copie al `upperdir`; ejecutar el binario resultante (que lanza `/bin/sh` con `setuid(0)`) para obtener root.\n\n1. **FUSE** genera un `lowerdir` con un binario `setuid root` falso (metadatos falsificados, sin ser root).\n2. **OverlayFS** copia ese binario al `upperdir` sin validar los metadatos.\n3. Se ejecuta el binario *setuid root* resultante → **shell de root**.\n\nEn la práctica (p. ej. el PoC `xkaneiki/CVE-2023-0386`) se compila con `make all` y se lanza:\n```bash\n./fuse ./ovlcap/lower ./gc &   # monta el lowerdir falso con FUSE\n./exp                          # dispara OverlayFS y obtiene root\n```\n\n> [!note] Payload mínimo\n> Basta un binario que haga `setuid(0)` y ejecute `/bin/sh`. FUSE solo falsifica los metadatos visibles en el `lowerdir`; no se modifica el binario del exploit.\n\n## Cómo se detecta\n- Comprobar la **versión del kernel** (`uname -r`): las ramas **5.11 – 6.1.8** sin backport son vulnerables.\n- Vigilar **montajes FUSE** y **montajes OverlayFS** creados por usuarios sin privilegios, y la aparición de binarios **setuid root** nuevos en directorios escribibles.\n- Herramientas de enumeración local (linpeas) marcan el kernel como potencialmente vulnerable.\n\n## Mitigación\n- **Actualizar el kernel** a una versión con el parche (que añade `kuid_has_mapping` / `kgid_has_mapping` para verificar que UID/GID estén mapeados en el *namespace* actual, abortando la copia si no lo están).\n- Restringir la creación de ***user namespaces*** sin privilegios (`kernel.unprivileged_userns_clone=0`) donde no se necesiten.\n- Limitar el uso de **FUSE** por usuarios no confiables.\n\n## Laboratorio / práctica\n- <span class=\"embargo\" title=\"Máquina activa de HTB: embargada hasta su retiro\">████████</span> (HackTheBox), escalada de privilegios a root del host.\n\n## Referencias\n- [CVE-2023-0386 (MITRE)](https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2023-0386)\n- Informe técnico propio: repo **Informes-Tecnicos** → `CVE-2023-0386`.\n- PoC: `xkaneiki/CVE-2023-0386` (GitHub).\n",
-   "mtime": "2026-11-16T21:35:49.244816+00:00"
-  },
-  {
-   "id": "TwoMillon",
-   "title": "TwoMillon",
-   "path": "03 Máquinas y CTF/TwoMillon.md",
-   "folder": "03 Máquinas y CTF",
-   "props": {
-    "tipo": "maquina",
-    "plataforma": "HackTheBox",
-    "dificultad": "fácil",
-    "so": "Linux",
-    "estado": "completado",
-    "inicio": "2026-11-16"
-   },
-   "tags": [
-    "ctf"
+   "links": [
+    "TwoMillon"
    ],
-   "links": [],
-   "embargo": true,
-   "body": "",
-   "hiddenLinks": 3,
-   "mtime": "2026-11-16T21:35:48.680751+00:00"
+   "embargo": false,
+   "body": "## Descripción\nEscalada de **privilegios local** en el kernel de Linux por un error en la validación de metadatos de **OverlayFS**. Afecta a kernels **5.11 – 6.1.8** (salvo correcciones posteriores como 5.15.91). Publicada en **enero de 2023**. Vista en la máquina [[TwoMillon]] (HackTheBox) como vector de **escalada a root**.\n\nOverlayFS combina dos directorios en una sola vista: **`lowerdir`** (solo lectura) y **`upperdir`** (escribible). El fallo está en que el kernel **no valida correctamente los metadatos** de los archivos que vienen del `lowerdir`, permitiendo que un archivo con UID/GID falsificados y el bit **setuid** se copie al `upperdir` como si tuviera privilegios de root legítimos.\n\n## Causa raíz\n- Un atacante presenta un `lowerdir` manipulado (por ejemplo montado con **FUSE**) con archivos que declaran **UID 0, GID 0 y setuid activado**.\n- Al combinarlo con OverlayFS, el kernel **copia esos archivos al `upperdir` sin comprobar** si los metadatos (UID/GID) están mapeados en el *namespace* del usuario actual.\n- El resultado es un binario **efectivamente setuid root** controlado por el atacante.\n- Es un caso de **CWE-282 (Improper Ownership Management)**: se confía en metadatos de propiedad provenientes de un componente de menor privilegio.\n\n## Impacto\n- Un usuario local sin privilegios obtiene un binario **setuid root** y, al ejecutarlo, una **shell de root**.\n- Compromiso total del host a partir de una cuenta de usuario normal.\n- En [[TwoMillon]] se usa para pasar del usuario `admin` a **root**.\n\n## Cómo se explota\nIdea general: usar **FUSE** para montar un `lowerdir` falso con un binario que declare UID 0, GID 0 y setuid; montar un OverlayFS que lo copie al `upperdir`; ejecutar el binario resultante (que lanza `/bin/sh` con `setuid(0)`) para obtener root.\n\n1. **FUSE** genera un `lowerdir` con un binario `setuid root` falso (metadatos falsificados, sin ser root).\n2. **OverlayFS** copia ese binario al `upperdir` sin validar los metadatos.\n3. Se ejecuta el binario *setuid root* resultante → **shell de root**.\n\nEn la práctica (p. ej. el PoC `xkaneiki/CVE-2023-0386`) se compila con `make all` y se lanza:\n```bash\n./fuse ./ovlcap/lower ./gc &   # monta el lowerdir falso con FUSE\n./exp                          # dispara OverlayFS y obtiene root\n```\n\n> [!note] Payload mínimo\n> Basta un binario que haga `setuid(0)` y ejecute `/bin/sh`. FUSE solo falsifica los metadatos visibles en el `lowerdir`; no se modifica el binario del exploit.\n\n## Cómo se detecta\n- Comprobar la **versión del kernel** (`uname -r`): las ramas **5.11 – 6.1.8** sin backport son vulnerables.\n- Vigilar **montajes FUSE** y **montajes OverlayFS** creados por usuarios sin privilegios, y la aparición de binarios **setuid root** nuevos en directorios escribibles.\n- Herramientas de enumeración local (linpeas) marcan el kernel como potencialmente vulnerable.\n\n## Mitigación\n- **Actualizar el kernel** a una versión con el parche (que añade `kuid_has_mapping` / `kgid_has_mapping` para verificar que UID/GID estén mapeados en el *namespace* actual, abortando la copia si no lo están).\n- Restringir la creación de ***user namespaces*** sin privilegios (`kernel.unprivileged_userns_clone=0`) donde no se necesiten.\n- Limitar el uso de **FUSE** por usuarios no confiables.\n\n## Laboratorio / práctica\n- [[TwoMillon]] (HackTheBox), escalada de privilegios a root del host.\n\n## Referencias\n- [CVE-2023-0386 (MITRE)](https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2023-0386)\n- Informe técnico propio: repo **Informes-Tecnicos** → `CVE-2023-0386`.\n- PoC: `xkaneiki/CVE-2023-0386` (GitHub).\n",
+   "mtime": "2026-11-16T21:35:49.244816+00:00"
   },
   {
    "id": "Puertos comunes",
@@ -551,10 +561,11 @@ window.VAULT = {
     "flashcards/redes"
    ],
    "links": [
-    "Puertos comunes"
+    "Puertos comunes",
+    "TwoMillon"
    ],
    "embargo": false,
-   "body": "#flashcards/redes\n\n[[Puertos comunes]] · **HTTP** — tcp\n\nServidor web **sin cifrar**. Punto de entrada más habitual: *fuzzing* de rutas, APIs, paneles de login y vulnerabilidades web. Revisar siempre el código fuente y el JS.\n\n## Enumeración rápida\n```bash\nnmap -p80 -sV <IP>\nwhatweb http://<IP>\ngobuster dir -u http://<IP>/ -w /usr/share/wordlists/dirb/common.txt\n```\n\n## Repaso (flashcard)\n¿Puerto por defecto de HTTP?::80/tcp\n\n## Relacionado\n- Visto en <span class=\"embargo\" title=\"Máquina activa de HTB: embargada hasta su retiro\">████████</span>: *fuzzing* con gobuster, bypass del código de invitación y una API REST con *mass-assignment* + inyección de comandos.\n",
+   "body": "#flashcards/redes\n\n[[Puertos comunes]] · **HTTP** — tcp\n\nServidor web **sin cifrar**. Punto de entrada más habitual: *fuzzing* de rutas, APIs, paneles de login y vulnerabilidades web. Revisar siempre el código fuente y el JS.\n\n## Enumeración rápida\n```bash\nnmap -p80 -sV <IP>\nwhatweb http://<IP>\ngobuster dir -u http://<IP>/ -w /usr/share/wordlists/dirb/common.txt\n```\n\n## Repaso (flashcard)\n¿Puerto por defecto de HTTP?::80/tcp\n\n## Relacionado\n- Visto en [[TwoMillon]]: *fuzzing* con gobuster, bypass del código de invitación y una API REST con *mass-assignment* + inyección de comandos.\n",
    "mtime": "2026-11-16T21:34:34.548615+00:00"
   },
   {
@@ -669,10 +680,11 @@ window.VAULT = {
    "links": [
     "Puertos comunes",
     "DoubleTake",
-    "CVE-2026-123158"
+    "CVE-2026-123158",
+    "TwoMillon"
    ],
    "embargo": false,
-   "body": "#flashcards/redes\n\n[[Puertos comunes]] · **SSH** — tcp\n\nAcceso remoto cifrado por línea de comandos. Objetivo típico para **fuerza bruta** de credenciales y reutilización de contraseñas filtradas. La *libc* del objetivo (glibc vs **musl** en Alpine) importa para ciertos fallos.\n\n## Enumeración rápida\n```bash\nnmap -p22 -sV <IP>\nssh usuario@<IP>\nhydra -L users.txt -P pass.txt ssh://<IP>\n```\n\n## Repaso (flashcard)\n¿Puerto por defecto de SSH?::22/tcp\n\n## Relacionado\n- Visto en [[DoubleTake]] (acceso inicial vía [[CVE-2026-123158]]) y en <span class=\"embargo\" title=\"Máquina activa de HTB: embargada hasta su retiro\">████████</span> (acceso como `admin` reutilizando credenciales del sitio).\n- Vulnerabilidad relacionada: [[CVE-2026-123158]]\n",
+   "body": "#flashcards/redes\n\n[[Puertos comunes]] · **SSH** — tcp\n\nAcceso remoto cifrado por línea de comandos. Objetivo típico para **fuerza bruta** de credenciales y reutilización de contraseñas filtradas. La *libc* del objetivo (glibc vs **musl** en Alpine) importa para ciertos fallos.\n\n## Enumeración rápida\n```bash\nnmap -p22 -sV <IP>\nssh usuario@<IP>\nhydra -L users.txt -P pass.txt ssh://<IP>\n```\n\n## Repaso (flashcard)\n¿Puerto por defecto de SSH?::22/tcp\n\n## Relacionado\n- Visto en [[DoubleTake]] (acceso inicial vía [[CVE-2026-123158]]) y en [[TwoMillon]] (acceso como `admin` reutilizando credenciales del sitio).\n- Vulnerabilidad relacionada: [[CVE-2026-123158]]\n",
    "mtime": "2026-11-16T21:34:34.484130+00:00"
   },
   {
@@ -722,6 +734,29 @@ window.VAULT = {
   "DoubleTake-1794786428574.webp",
   "DoubleTake-1794786524701.webp",
   "DoubleTake-1794786580862.webp",
-  "DoubleTake-1794786674889.webp"
+  "DoubleTake-1794786674889.webp",
+  "TwoMillon-1794852880096.webp",
+  "TwoMillon-1794852923073.webp",
+  "TwoMillon-1794853253786.webp",
+  "TwoMillon-1794853554439.webp",
+  "TwoMillon-1794853982726.webp",
+  "TwoMillon-1794854100710.webp",
+  "TwoMillon-1794854122867.webp",
+  "TwoMillon-1794854148502.webp",
+  "TwoMillon-1794854426069.webp",
+  "TwoMillon-1794854487599.webp",
+  "TwoMillon-1794854640985.webp",
+  "TwoMillon-1794854725221.webp",
+  "TwoMillon-1794854926621.webp",
+  "TwoMillon-1794854944968.webp",
+  "TwoMillon-1794855916218.webp",
+  "TwoMillon-1794855972566.webp",
+  "TwoMillon-1794856082149.webp",
+  "TwoMillon-1794856468488.webp",
+  "TwoMillon-1794856486143.webp",
+  "TwoMillon-1794857206671.webp",
+  "TwoMillon-1794857475563.webp",
+  "TwoMillon-1794857601654.webp",
+  "TwoMillon-1794857768719.webp"
  ]
 };
