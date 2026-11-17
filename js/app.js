@@ -182,6 +182,18 @@
       </article>`).join("")}</div>`;
 
   /* ---- HackTheBox ---- */
+  // Puertos atacados en una máquina: notas tipo "puerto" que enlazan a la
+  // máquina (o que su writeup enlaza), ordenadas por número de puerto.
+  function machinePorts(m, note) {
+    const want = slug(m.name); const out = new Map();
+    noteList.forEach((n) => {
+      if (!n.props || n.props.tipo !== "puerto") return;
+      const linksMachine = (n.links || []).some((l) => slug(l) === want);
+      const inWriteup = note && (note.links || []).some((l) => l.toLowerCase() === n.id.toLowerCase());
+      if (linksMachine || inWriteup) out.set(n.id, n);
+    });
+    return [...out.values()].sort((a, b) => (parseInt(a.props.puerto) || 0) - (parseInt(b.props.puerto) || 0));
+  }
   Views.htb = (id) => {
     const h = P.htb || {}; const machines = h.machines || [];
     if (id) {
@@ -189,6 +201,11 @@
       if (!m) return notFound();
       const note = byId.get(m.name.toLowerCase());
       const owned = m.status === "owned";
+      const ports = machinePorts(m, note);
+      const portsHtml = ports.length
+        ? `<div class="m-ports"><span class="m-ports__h">Puertos atacados</span><div class="ports">${ports.map((n) =>
+            `<a class="port" href="#/notas/${slug(n.id)}"><b>${esc(n.props.puerto)}/${esc(n.props.protocolo || "tcp")}</b> ${esc(n.props.servicio || n.title)}</a>`).join("")}</div></div>`
+        : "";
       const writeup = note && !note.embargo && note.body
         ? `<div class="md">${renderMd(note.body)}</div>`
         : (m.status === "active"
@@ -199,6 +216,7 @@
       <h1 class="vhead">${esc(m.name)}</h1>
       <div class="m-meta"><span>${esc(m.os)}</span>·<span>${esc(m.diff)}</span>·<span>${esc(m.when)}</span>
         <span class="m-flags"><i class="${owned ? "ok" : ""}">user</i><i class="${owned ? "ok" : ""}">root</i></span></div>
+      ${portsHtml}
       <ul class="chain big">${(m.chain || []).map(([k, v]) => `<li><b>${esc(k)}</b><span>${esc(v)}</span></li>`).join("")}</ul>
       ${m.report ? `<a class="btn btn--ghost" href="${m.report}" target="_blank" rel="noopener">Informe técnico (PDF) ↗</a>` : ""}
       ${writeup}`;

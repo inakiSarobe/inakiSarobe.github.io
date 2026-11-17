@@ -100,6 +100,12 @@ body::before { display: none; }
 .m-flags { display: inline-flex; gap: 6px; margin-left: 6px; }
 .m-flags i { font-style: normal; border: 1px solid var(--line-2); border-radius: 4px; padding: 3px 6px; color: var(--muted); font-size: 11px; }
 .m-flags i.ok { color: var(--accent); border-color: var(--accent); }
+.m-ports { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0 0 18px; }
+.m-ports__h { font: 600 10px/1 var(--mono); letter-spacing: .07em; text-transform: uppercase; color: var(--muted); }
+.ports { display: flex; flex-wrap: wrap; gap: 6px; }
+.port { display: inline-flex; align-items: baseline; gap: 6px; border: 1px solid var(--line-2); border-radius: 6px; padding: 4px 9px; font: 12px/1.3 var(--mono); color: var(--text-2); text-decoration: none; transition: border-color .15s, color .15s; }
+.port b { color: var(--accent); font-weight: 600; }
+.port:hover { border-color: var(--accent); color: var(--text); }
 .chain.big { list-style: none; margin: 0 0 18px; padding: 0; display: grid; gap: 8px; max-width: 720px; }
 .chain.big li { display: grid; grid-template-columns: 90px 1fr; gap: 12px; background: var(--bg-2); border: 1px solid var(--line); border-radius: 8px; padding: 11px 14px; }
 .chain.big b { color: var(--accent); font: 600 11px/1.4 var(--mono); text-transform: uppercase; }
