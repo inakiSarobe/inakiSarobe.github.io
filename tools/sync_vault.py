@@ -46,6 +46,21 @@ OUT_DIR = ROOT / "vault"
 ASSETS = OUT_DIR / "assets"
 
 
+def stamp_cache_version(build: str) -> bool:
+    """Reescribe ?v=... en los assets locales (.js/.css) de index.html para
+    bustear la caché del navegador en cada publicación. Deja intacto el CDN
+    (marked), que no lleva ?v=."""
+    idx = ROOT / "index.html"
+    if not idx.exists():
+        return False
+    html = idx.read_text(encoding="utf-8")
+    new = re.sub(r'(\.(?:js|css))\?v=[0-9A-Za-z_.]+(")', rf"\1?v={build}\2", html)
+    if new != html:
+        idx.write_text(new, encoding="utf-8")
+        return True
+    return False
+
+
 # ---------------------------------------------------------------- frontmatter
 def _scalar(v: str):
     v = v.strip()
@@ -254,6 +269,9 @@ def main() -> int:
         json.dumps(data, ensure_ascii=False, indent=1, default=str) + ";\n"
     (OUT_DIR / "vault.js").write_text(js, encoding="utf-8")
     print(f"[ok] {len(notes)} notas ({len(embargoed)} embargadas), {len(copied)} imágenes -> {OUT_DIR / 'vault.js'}")
+    build = datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S")
+    if stamp_cache_version(build):
+        print(f"[ok] index.html versionado para caché -> ?v={build}")
     return 0
 
 

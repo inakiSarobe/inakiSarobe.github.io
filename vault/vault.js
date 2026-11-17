@@ -1,6 +1,6 @@
 /* Generado por tools/sync_vault.py — no editar a mano */
 window.VAULT = {
- "generated": "2026-11-17T02:09:32+00:00",
+ "generated": "2026-11-17T02:18:20+00:00",
  "vaultName": "Cybersecurity",
  "notes": [
   {
