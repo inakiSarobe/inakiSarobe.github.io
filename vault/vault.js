@@ -1,8 +1,39 @@
 /* Generado por tools/sync_vault.py — no editar a mano */
 window.VAULT = {
- "generated": "2026-11-17T02:18:20+00:00",
+ "generated": "2026-11-17T02:42:08+00:00",
  "vaultName": "Cybersecurity",
  "notes": [
+  {
+   "id": "80 HTTP",
+   "title": "80 HTTP",
+   "path": "01 Conceptos/Puertos/80 HTTP.md",
+   "folder": "01 Conceptos/Puertos",
+   "props": {
+    "tipo": "puerto",
+    "puerto": "80",
+    "protocolo": "tcp",
+    "servicio": "HTTP",
+    "area": "redes",
+    "estado": "repasando",
+    "tags": [
+     "puerto",
+     "redes"
+    ]
+   },
+   "tags": [
+    "puerto",
+    "redes",
+    "flashcards/redes"
+   ],
+   "links": [
+    "Puertos comunes",
+    "TwoMillion",
+    "Cap"
+   ],
+   "embargo": false,
+   "body": "#flashcards/redes\n\n[[Puertos comunes]] · **HTTP** — tcp\n\nServidor web **sin cifrar**. Punto de entrada más habitual: *fuzzing* de rutas, APIs, paneles de login y vulnerabilidades web. Revisar siempre el código fuente y el JS.\n\n## Enumeración rápida\n```bash\nnmap -p80 -sV <IP>\nwhatweb http://<IP>\ngobuster dir -u http://<IP>/ -w /usr/share/wordlists/dirb/common.txt\n```\n\n## Repaso (flashcard)\n¿Puerto por defecto de HTTP?::80/tcp\n\n## Relacionado\n- Visto en [[TwoMillion]]: *fuzzing* con gobuster, bypass del código de invitación y una API REST con *mass-assignment* + inyección de comandos.\n- Visto en [[Cap]]: un **IDOR** en `/data/<id>` permite descargar las capturas de tráfico (`.pcap`) de otros usuarios.\n",
+   "mtime": "2026-11-17T02:42:01.767735+00:00"
+  },
   {
    "id": "22 SSH",
    "title": "22 SSH",
@@ -29,22 +60,23 @@ window.VAULT = {
     "Puertos comunes",
     "DoubleTake",
     "CVE-2026-123158",
-    "TwoMillion"
+    "TwoMillion",
+    "Cap"
    ],
    "embargo": false,
-   "body": "#flashcards/redes\n\n[[Puertos comunes]] · **SSH** — tcp\n\nAcceso remoto cifrado por línea de comandos. Objetivo típico para **fuerza bruta** de credenciales y reutilización de contraseñas filtradas. La *libc* del objetivo (glibc vs **musl** en Alpine) importa para ciertos fallos.\n\n## Enumeración rápida\n```bash\nnmap -p22 -sV <IP>\nssh usuario@<IP>\nhydra -L users.txt -P pass.txt ssh://<IP>\n```\n\n## Repaso (flashcard)\n¿Puerto por defecto de SSH?::22/tcp\n\n## Relacionado\n- Visto en [[DoubleTake]] (acceso inicial vía [[CVE-2026-123158]]) y en [[TwoMillion]] (acceso como `admin` reutilizando credenciales del sitio).\n- Vulnerabilidad relacionada: [[CVE-2026-123158]]\n",
-   "mtime": "2026-11-17T02:09:16.966550+00:00"
+   "body": "#flashcards/redes\n\n[[Puertos comunes]] · **SSH** — tcp\n\nAcceso remoto cifrado por línea de comandos. Objetivo típico para **fuerza bruta** de credenciales y reutilización de contraseñas filtradas. La *libc* del objetivo (glibc vs **musl** en Alpine) importa para ciertos fallos.\n\n## Enumeración rápida\n```bash\nnmap -p22 -sV <IP>\nssh usuario@<IP>\nhydra -L users.txt -P pass.txt ssh://<IP>\n```\n\n## Repaso (flashcard)\n¿Puerto por defecto de SSH?::22/tcp\n\n## Relacionado\n- Visto en [[DoubleTake]] (acceso inicial vía [[CVE-2026-123158]]), en [[TwoMillion]] (acceso como `admin` reutilizando credenciales del sitio) y en [[Cap]] (login como `nathan` reutilizando la contraseña del FTP).\n- Vulnerabilidad relacionada: [[CVE-2026-123158]]\n",
+   "mtime": "2026-11-17T02:41:59.238114+00:00"
   },
   {
-   "id": "80 HTTP",
-   "title": "80 HTTP",
-   "path": "01 Conceptos/Puertos/80 HTTP.md",
+   "id": "21 FTP",
+   "title": "21 FTP",
+   "path": "01 Conceptos/Puertos/21 FTP.md",
    "folder": "01 Conceptos/Puertos",
    "props": {
     "tipo": "puerto",
-    "puerto": "80",
+    "puerto": "21",
     "protocolo": "tcp",
-    "servicio": "HTTP",
+    "servicio": "FTP",
     "area": "redes",
     "estado": "repasando",
     "tags": [
@@ -59,11 +91,11 @@ window.VAULT = {
    ],
    "links": [
     "Puertos comunes",
-    "TwoMillion"
+    "Cap"
    ],
    "embargo": false,
-   "body": "#flashcards/redes\n\n[[Puertos comunes]] · **HTTP** — tcp\n\nServidor web **sin cifrar**. Punto de entrada más habitual: *fuzzing* de rutas, APIs, paneles de login y vulnerabilidades web. Revisar siempre el código fuente y el JS.\n\n## Enumeración rápida\n```bash\nnmap -p80 -sV <IP>\nwhatweb http://<IP>\ngobuster dir -u http://<IP>/ -w /usr/share/wordlists/dirb/common.txt\n```\n\n## Repaso (flashcard)\n¿Puerto por defecto de HTTP?::80/tcp\n\n## Relacionado\n- Visto en [[TwoMillion]]: *fuzzing* con gobuster, bypass del código de invitación y una API REST con *mass-assignment* + inyección de comandos.\n",
-   "mtime": "2026-11-17T02:09:16.876517+00:00"
+   "body": "#flashcards/redes\n\n[[Puertos comunes]] · **FTP** — tcp\n\nProtocolo de transferencia de archivos. Transmite credenciales y datos en **texto plano**. Interesan el login anónimo (`anonymous`) y las versiones vulnerables (p. ej. vsftpd 2.3.4).\n\n## Enumeración rápida\n```bash\nnmap -p21 -sV --script ftp-anon,ftp-syst <IP>\nftp <IP>   # probar usuario anonymous\n```\n\n## Repaso (flashcard)\n¿Puerto por defecto de FTP?::21/tcp\n\n## Relacionado\n- Visto en [[Cap]]: las credenciales de FTP viajaban en **texto plano** y quedaron capturadas en un `.pcap` que se descargó por un IDOR en el panel web.\n",
+   "mtime": "2026-11-17T02:41:56.811094+00:00"
   },
   {
    "id": "CVE-2023-0386",
@@ -686,35 +718,6 @@ window.VAULT = {
    "embargo": false,
    "body": "#flashcards/redes\n\n[[Puertos comunes]] · **Telnet** — tcp\n\nAcceso remoto **sin cifrar**: credenciales y sesión viajan en texto plano. Casi siempre un hallazgo a reportar por sí mismo.\n\n## Enumeración rápida\n```bash\nnmap -p23 -sV --script telnet-encryption <IP>\ntelnet <IP>\n```\n\n## Repaso (flashcard)\n¿Puerto por defecto de Telnet?::23/tcp\n",
    "mtime": "2026-11-16T21:34:34.486089+00:00"
-  },
-  {
-   "id": "21 FTP",
-   "title": "21 FTP",
-   "path": "01 Conceptos/Puertos/21 FTP.md",
-   "folder": "01 Conceptos/Puertos",
-   "props": {
-    "tipo": "puerto",
-    "puerto": "21",
-    "protocolo": "tcp",
-    "servicio": "FTP",
-    "area": "redes",
-    "estado": "repasando",
-    "tags": [
-     "puerto",
-     "redes"
-    ]
-   },
-   "tags": [
-    "puerto",
-    "redes",
-    "flashcards/redes"
-   ],
-   "links": [
-    "Puertos comunes"
-   ],
-   "embargo": false,
-   "body": "#flashcards/redes\n\n[[Puertos comunes]] · **FTP** — tcp\n\nProtocolo de transferencia de archivos. Transmite credenciales y datos en **texto plano**. Interesan el login anónimo (`anonymous`) y las versiones vulnerables (p. ej. vsftpd 2.3.4).\n\n## Enumeración rápida\n```bash\nnmap -p21 -sV --script ftp-anon,ftp-syst <IP>\nftp <IP>   # probar usuario anonymous\n```\n\n## Repaso (flashcard)\n¿Puerto por defecto de FTP?::21/tcp\n",
-   "mtime": "2026-11-16T21:34:34.470341+00:00"
   }
  ],
  "assets": [
