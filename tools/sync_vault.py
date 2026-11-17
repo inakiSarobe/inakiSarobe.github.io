@@ -245,6 +245,15 @@ def main() -> int:
             if t.lower() not in seen and t.lower() != name.lower():
                 seen.add(t.lower())
                 links.append(t)
+        # Wikilinks que vivan en las propiedades (p. ej. puertos:/herramientas:)
+        # también cuentan como enlaces, así conectan en el grafo.
+        for pv in clean_props.values():
+            for piece in (pv if isinstance(pv, list) else [pv]):
+                for m in WIKILINK.finditer(str(piece)):
+                    t = m.group(1).strip()
+                    if t.lower() not in seen and t.lower() != name.lower():
+                        seen.add(t.lower())
+                        links.append(t)
         tags = [str(t) for t in as_list(props.get("tags"))]
         stripped = FENCE.sub("", body)
         for t in INLINE_TAG.findall(stripped):

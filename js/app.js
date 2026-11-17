@@ -182,19 +182,24 @@
       </article>`).join("")}</div>`;
 
   /* ---- HackTheBox ---- */
-  // Puertos / herramientas de una máquina: notas de ese tipo que enlazan a la
-  // máquina, o que el writeup de la máquina enlaza (fuente: la nota de Obsidian).
-  function machineLinked(m, note, tipo) {
-    const want = slug(m.name); const seen = new Set(); const out = [];
-    // 1) en el orden en que la propia nota de la máquina las enlaza
-    if (note) (note.links || []).forEach((l) => {
-      const n = byId.get(l.toLowerCase());
+  // Puertos / herramientas de una máquina. Fuente de verdad: las propiedades
+  // (frontmatter) `puertos:` / `herramientas:` de la nota de Obsidian, con
+  // wikilinks. Si la máquina no tiene nota (p. ej. Cap), se infiere desde las
+  // notas de ese tipo que enlazan a la máquina.
+  function machineLinked(m, note, tipo, prop) {
+    const seen = new Set(); const out = [];
+    const add = (name) => {
+      const id = String(name).replace(/\[\[|\]\]/g, "").split("|")[0].split("#")[0].trim().toLowerCase();
+      const n = byId.get(id);
       if (n && n.props && n.props.tipo === tipo && !seen.has(n.id)) { seen.add(n.id); out.push(n); }
-    });
-    // 2) notas de ese tipo que enlazan a la máquina pero el writeup no listó
-    noteList.forEach((n) => {
-      if (n.props && n.props.tipo === tipo && !seen.has(n.id) && (n.links || []).some((l) => slug(l) === want)) { seen.add(n.id); out.push(n); }
-    });
+    };
+    const pv = note && note.props ? note.props[prop] : null;
+    if (pv != null && String(pv).length) {
+      (Array.isArray(pv) ? pv : [pv]).forEach(add);
+    } else {
+      const want = slug(m.name);
+      noteList.forEach((n) => { if (n.props && n.props.tipo === tipo && (n.links || []).some((l) => slug(l) === want)) add(n.id); });
+    }
     return out;
   }
   // Las secciones de resumen (Puertos atacados / Herramientas usadas) se muestran
@@ -216,9 +221,9 @@
       if (!m) return notFound();
       const note = byId.get(m.name.toLowerCase());
       const owned = m.status === "owned";
-      const ports = machineLinked(m, note, "puerto")
+      const ports = machineLinked(m, note, "puerto", "puertos")
         .sort((a, b) => (parseInt(a.props.puerto) || 0) - (parseInt(b.props.puerto) || 0));
-      const tools = machineLinked(m, note, "herramienta");
+      const tools = machineLinked(m, note, "herramienta", "herramientas");
       const portsHtml = ports.length
         ? `<div class="m-ports"><span class="m-ports__h">Puertos atacados</span><div class="ports">${ports.map((n) =>
             `<a class="port" href="#/notas/${slug(n.id)}"><b>${esc(n.props.puerto)}/${esc(n.props.protocolo || "tcp")}</b> ${esc(n.props.servicio || n.title)}</a>`).join("")}</div></div>`
