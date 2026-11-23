@@ -84,6 +84,26 @@ body::before { display: none; }
 .badge.ok { color: var(--accent); border-color: var(--accent); }
 .badge.warn { color: var(--crit); border-color: var(--crit); }
 
+/* Formación / certificaciones */
+.edu { display: flex; gap: 14px; align-items: flex-start; background: var(--bg-2); border: 1px solid var(--line); border-radius: var(--r); padding: 16px 18px; }
+.edu__ico { flex: none; width: 44px; height: 44px; border-radius: 10px; border: 1px solid var(--line-2); display: flex; align-items: center; justify-content: center; font: 700 11px/1 var(--mono); color: var(--accent); }
+.edu b { color: #fff; font-size: 16px; }
+.certs { display: grid; grid-template-columns: repeat(auto-fill, minmax(270px, 1fr)); gap: 12px; }
+.cert { display: flex; flex-direction: column; gap: 6px; background: var(--bg-2); border: 1px solid var(--line); border-left: 3px solid var(--accent); border-radius: var(--r); padding: 16px 18px; }
+.cert--wip { border-left-color: var(--med); }
+.cert__top { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+.cert h3 { margin: 0; color: #fff; font-size: 16px; line-height: 1.3; }
+.cert__meta { font: 12px/1.4 var(--mono); color: var(--muted); margin: 2px 0 0; }
+.cert__desc { color: var(--text-2); font-size: 14px; margin: 4px 0 0; }
+.cert__list { margin: 4px 0 0; padding-left: 18px; color: var(--text-2); font-size: 13.5px; }
+.cert__list li { margin: 3px 0; }
+.cert .tags { margin-top: 6px; }
+.cert__list + .cert__verify, .tags + .cert__verify, .cert__desc + .cert__verify { margin-top: auto; }
+.cert__verify { padding-top: 8px; font: 600 12.5px/1.3 var(--mono); }
+.cert__verify:hover, .cert__verify:focus-visible { text-decoration: underline; }
+.badge.wip { color: var(--med); border-color: var(--med); }
+.vtitle .mutxt { font: 500 12px/1.4 var(--mono); display: inline-block; }
+
 .caps { display: grid; gap: 14px; }
 .cap { background: var(--bg-2); border: 1px solid var(--line); border-left: 3px solid var(--accent); border-radius: var(--r); padding: 18px 20px; }
 .cap h3 { margin: 0; color: #fff; font-size: 17px; }
