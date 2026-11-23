@@ -15,6 +15,7 @@
     { id: "htb", label: "CTFs", icon: "▲" },
     { id: "vuln", label: "Vulnerabilidades", icon: "⚑" },
     { id: "proyectos", label: "Proyectos", icon: "◇" },
+    { id: "formacion", label: "Formación", icon: "✓" },
     { id: "notas", label: "Notas", icon: "#" },
     { id: "contacto", label: "Contacto", icon: "@" }
   ];
@@ -152,6 +153,7 @@
       ${tile("htb", "▲", "CTFs", `${(P.htb && P.htb.machines || []).length} máquinas resueltas · cómo las resolví`)}
       ${tile("vuln", "⚑", "Vulnerabilidades", `${vulnNotes().length} CVEs documentados`)}
       ${tile("proyectos", "◇", "Proyectos", `${(P.projects || []).length} proyectos propios`)}
+      ${tile("formacion", "✓", "Formación", formacionSub())}
       ${tile("notas", "#", "Notas", "Mis notas de estudio")}
       ${tile("contacto", "@", "Contacto", "Hablemos")}
     </section>`;
@@ -329,6 +331,49 @@
     <div id="repos-wrap"><h2 class="vtitle">Repositorios <span class="mutxt mono" id="repos-src">(en vivo desde GitHub)</span></h2><div class="repos" id="repos"></div></div>`;
   };
 
+  /* ---- Formación: carrera, certificaciones, cursos en curso, laboratorios ---- */
+  function formacionSub() {
+    const c = (P.formacion && P.formacion.certificaciones) || [];
+    const ok = c.filter((x) => x.status === "obtenida").length, wip = c.length - ok;
+    return `${ok} certificaciones${wip ? ` · ${wip} en curso` : ""} · laboratorios UTN`;
+  }
+  Views.formacion = () => {
+    const F = P.formacion || {}; const car = F.carrera; const certs = F.certificaciones || []; const labs = F.labs || [];
+    const cert = (c) => {
+      const done = c.status === "obtenida";
+      return `
+      <article class="cert${done ? "" : " cert--wip"}">
+        <div class="cert__top">
+          <h3>${esc(c.name)}</h3>
+          <span class="badge ${done ? "ok" : "wip"}">${done ? "Obtenida" : "En curso"}</span>
+        </div>
+        <p class="cert__meta">${esc(c.issuer)}${c.level ? ` · ${esc(c.level)}` : ""}${c.date ? ` · ${esc(c.date)}` : ""}</p>
+        <p class="cert__desc">${esc(c.desc)}</p>
+        ${c.tags ? `<div class="tags">${c.tags.map((t) => `<span class="tag">${esc(t)}</span>`).join("")}</div>` : ""}
+        ${c.url ? `<a class="cert__verify" href="${esc(c.url)}" target="_blank" rel="noopener">Verificar credencial${c.verify ? ` en ${esc(c.verify)}` : ""} ↗</a>` : ""}
+      </article>`;
+    };
+    const ok = certs.filter((c) => c.status === "obtenida"), wip = certs.filter((c) => c.status !== "obtenida");
+    return `
+    <h1 class="vhead">Formación <span class="vhead__sub">carrera, certificaciones y laboratorios</span></h1>
+    <p class="vlede">Lo que estudio de manera formal. Las certificaciones tienen un enlace para verificarlas y lo que todavía estoy cursando figura como <b>en curso</b>.</p>
+    ${car ? `<div class="edu">
+      <span class="edu__ico" aria-hidden="true">UTN</span>
+      <div><b>${esc(car.title)}</b><p class="cert__meta">${esc(car.org)} · ${esc(car.when)}</p>${car.note ? `<p class="cert__desc">${esc(car.note)}</p>` : ""}</div>
+    </div>` : ""}
+    ${wip.length ? `<h2 class="vtitle">En curso</h2><div class="certs">${wip.map(cert).join("")}</div>` : ""}
+    ${ok.length ? `<h2 class="vtitle">Certificaciones obtenidas</h2><div class="certs">${ok.map(cert).join("")}</div>` : ""}
+    ${labs.length ? `<h2 class="vtitle">Laboratorios de investigación <span class="mutxt mono">(participación académica, no empleo)</span></h2>
+    <div class="certs">${labs.map((l) => `
+      <article class="cert">
+        <div class="cert__top"><h3>${esc(l.name)}</h3></div>
+        <p class="cert__meta">${esc(l.org)} · ${esc(l.when)}</p>
+        <p class="cert__desc">${esc(l.role)}</p>
+        <ul class="cert__list">${(l.items || []).map((i) => `<li>${esc(i)}</li>`).join("")}</ul>
+        ${l.link ? `<a class="cert__verify" href="${esc(l.link.url)}">${esc(l.link.label)} →</a>` : ""}
+      </article>`).join("")}</div>` : ""}`;
+  };
+
   /* ---- Notas ---- */
   Views.notas = (id) => {
     if (id) {
@@ -438,6 +483,7 @@
     vulnNotes().forEach((n) => items.push({ label: n.id, hint: "CVE", route: "#/vuln/" + slug(n.id) }));
     noteList.forEach((n) => { const t = noteType(n); if (t !== "maquina" && t !== "vulnerabilidad") items.push({ label: n.title, hint: "nota", route: "#/notas/" + slug(n.id) }); });
     (P.projects || []).forEach((p) => items.push({ label: p.name, hint: "proyecto", route: "#/proyectos/" + slug(p.name) }));
+    ((P.formacion || {}).certificaciones || []).forEach((c) => items.push({ label: `${c.name} · ${c.issuer}`, hint: c.status === "obtenida" ? "certificación" : "en curso", route: "#/formacion" }));
     items.push({ label: "Descargar CV", hint: "archivo", route: (P.links || {}).cvEs, dl: true });
     return items;
   }

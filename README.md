@@ -11,7 +11,7 @@ remediación recomendada es contactarme.
 | Ruta | Qué es |
 |---|---|
 | `index.html` | Esqueleto del informe (portada, §1–§6, anexos A–C) |
-| `data/profile.js` | **Todo el contenido editable**: hallazgos, máquinas HTB, bitácora, arsenal, proyectos |
+| `data/profile.js` | **Todo el contenido editable**: hallazgos, máquinas HTB, bitácora, arsenal, proyectos, formación (certificaciones, cursos en curso, laboratorios) |
 | `js/app.js` | Terminal interactiva (`nmap`, `help`, `sudo contratar`…), render de secciones, GitHub en vivo |
 | `js/vault.js` | Anexo B: grafo de notas tipo Obsidian + lector de Markdown (callouts, wikilinks, flashcards) |
 | `vault/vault.js` | **Generado** desde el vault de Obsidian (no editar a mano) |
