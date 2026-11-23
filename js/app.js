@@ -335,7 +335,7 @@
   function formacionSub() {
     const c = (P.formacion && P.formacion.certificaciones) || [];
     const ok = c.filter((x) => x.status === "obtenida").length, wip = c.length - ok;
-    return `${ok} certificaciones${wip ? ` · ${wip} en curso` : ""} · laboratorios UTN`;
+    return `${ok} certificaciones${wip ? ` · ${wip} en curso` : ""} · CTF y laboratorios`;
   }
   Views.formacion = () => {
     const F = P.formacion || {}; const car = F.carrera; const certs = F.certificaciones || []; const labs = F.labs || [];
@@ -355,7 +355,7 @@
     };
     const ok = certs.filter((c) => c.status === "obtenida"), wip = certs.filter((c) => c.status !== "obtenida");
     return `
-    <h1 class="vhead">Formación <span class="vhead__sub">carrera, certificaciones y laboratorios</span></h1>
+    <h1 class="vhead">Formación <span class="vhead__sub">carrera, certificaciones, competencias y laboratorios</span></h1>
     <p class="vlede">Lo que estudio de manera formal. Las certificaciones tienen un enlace para verificarlas y lo que todavía estoy cursando figura como <b>en curso</b>.</p>
     ${car ? `<div class="edu">
       <span class="edu__ico" aria-hidden="true">UTN</span>
@@ -363,6 +363,15 @@
     </div>` : ""}
     ${wip.length ? `<h2 class="vtitle">En curso</h2><div class="certs">${wip.map(cert).join("")}</div>` : ""}
     ${ok.length ? `<h2 class="vtitle">Certificaciones obtenidas</h2><div class="certs">${ok.map(cert).join("")}</div>` : ""}
+    ${(F.eventos || []).length ? `<h2 class="vtitle">Competencias y eventos</h2>
+    <div class="certs">${F.eventos.map((e) => `
+      <article class="cert">
+        <div class="cert__top"><h3>${esc(e.name)}</h3>${e.result ? `<span class="badge ok">${esc(e.result)}</span>` : ""}</div>
+        <p class="cert__meta">${esc(e.org)} · ${esc(e.when)}</p>
+        <p class="cert__desc">${esc(e.role)}</p>
+        <ul class="cert__list">${(e.items || []).map((i) => `<li>${esc(i)}</li>`).join("")}</ul>
+        ${(e.links || []).map((l) => `<a class="cert__verify" href="${esc(l.url)}" target="_blank" rel="noopener">${esc(l.label)} ↗</a>`).join("")}
+      </article>`).join("")}</div>` : ""}
     ${labs.length ? `<h2 class="vtitle">Laboratorios de investigación <span class="mutxt mono">(participación académica, no empleo)</span></h2>
     <div class="certs">${labs.map((l) => `
       <article class="cert">

@@ -98,7 +98,8 @@ body::before { display: none; }
 .cert__list { margin: 4px 0 0; padding-left: 18px; color: var(--text-2); font-size: 13.5px; }
 .cert__list li { margin: 3px 0; }
 .cert .tags { margin-top: 6px; }
-.cert__verify { margin-top: auto; padding-top: 10px; font: 600 12.5px/1.3 var(--mono); }
+.cert__list + .cert__verify, .tags + .cert__verify, .cert__desc + .cert__verify { margin-top: auto; }
+.cert__verify { padding-top: 8px; font: 600 12.5px/1.3 var(--mono); }
 .cert__verify:hover, .cert__verify:focus-visible { text-decoration: underline; }
 .badge.wip { color: var(--med); border-color: var(--med); }
 .vtitle .mutxt { font: 500 12px/1.4 var(--mono); display: inline-block; }

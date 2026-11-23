@@ -101,6 +101,7 @@ window.PROFILE = {
       where: "CyberWar · HackerTech 2026 (UTN FRC) · morocho.ai (Ekoparty 2026) · h1-scrap",
       desc: "El objetivo construye sistemas multiagente para atacar y les pone límites duros. Para el CTF attack-defense CyberWar 2026 armó un framework con un centro de comando web, unos 46 agentes especializados y un router RAG que carga solo los relevantes para cada objetivo.",
       evidence: [
+        "<b>CyberWar · HackerTech 2026</b> (UTN FRC, Córdoba, 22 ago 2026): <b>4.º puesto</b> con mi equipo",
         "<b>CyberWar 2026</b>: replay de exploits confirmados contra todas las \"capitales\" rivales, tracker de flags con SQLite, guardia de SLA y generación de documentación de fixes",
         "Reglas de enfrentamiento embebidas: nada de DoS, nunca workstations rivales ni el juez",
         "Presentó <b>morocho.ai</b> (pentest automatizado con IA) al Start-up Zone de <b>Ekoparty 2026</b>; la demo interactiva fue parte de esa presentación",
@@ -147,7 +148,7 @@ window.PROFILE = {
       desc: "El objetivo comparte lo que aprende en charlas, podcasts y mentorías, en todos los formatos que encuentra.",
       evidence: [
         "Charla <b>\"DevSecOps automatizados\"</b> en PyDay 2025 (UTN La Plata), junto a Jonathan Santurio",
-        "<b>Mentor</b> del hackatón del 5.º congreso Cybertech Women en representación de la UTN: guió a un equipo internacional (Argentina y Colombia)",
+        "<b>Mentor</b> del Hackathon UTN-UNAD en el 5.º Congreso Internacional Cybertech Women (UNAD, mayo 2026), en representación de la UTN: guió a un equipo internacional (Argentina y Colombia). Con certificado de la UNAD",
         "Conversatorio de <b>OSINT</b> en el 2.º Foro Provincial de Ciberseguridad (oct 2025) y voz del Boletín N.º 1 del <b>GIC Podcast</b>",
         "Integrante del Semillero de Ciberseguridad GIC 2025"
       ],
@@ -218,6 +219,31 @@ window.PROFILE = {
         url: "https://academy.claude.com/verify/246c85e6d275c01f0d2737adb896d820",
         desc: "Uso de Claude para trabajo técnico. Complementa los proyectos de automatización con agentes de IA (CyberWar, morocho.ai).",
         tags: ["IA", "Agentes", "Automatización"]
+      }
+    ],
+    // Competencias y eventos (participación, no empleo).
+    eventos: [
+      {
+        name: "CyberWar · HackerTech 2026", org: "UTN Facultad Regional Córdoba", when: "22 ago 2026",
+        role: "CTF por equipos entre facultades de la UTN",
+        result: "4.º puesto",
+        items: [
+          "Competencia de ataque y defensa dentro de HackerTech, el evento de ciberseguridad de la UTN FRC (3.ª edición)",
+          "Armé un framework multiagente para el equipo: replay de exploits, seguimiento de flags y control de SLA"
+        ],
+        links: [
+          { label: "Sitio del evento", url: "https://hackertech.com.ar/" },
+          { label: "Código del framework", url: "https://github.com/inakiSarobe/Projects/tree/main/cyberwar" }
+        ]
+      },
+      {
+        name: "Hackathon UTN-UNAD · 5.º Congreso Internacional Cybertech Women", org: "UNAD (Colombia) · modalidad híbrida", when: "6–8 may 2026",
+        role: "Mentor en representación de la UTN",
+        result: "Mentor",
+        items: [
+          "Acompañé a un equipo internacional (Argentina y Colombia) durante la hackatón",
+          "Certificado emitido por la UNAD (Escuela de Ciencias Básicas, Tecnología e Ingeniería)"
+        ]
       }
     ],
     // Participación académica en laboratorios de la UTN FRLP (no es empleo).
@@ -293,11 +319,11 @@ window.PROFILE = {
     { when: "oct 2025", phase: "report", title: "2.º Foro Provincial de Ciberseguridad", text: "Con el GIC: conversatorio de OSINT con un juego hecho en el laboratorio y entrevistas para el GIC Podcast." },
     { when: "2025", phase: "report", title: "PyDay 2025 · \"DevSecOps automatizados\"", text: "Charla práctica sobre pipelines con seguridad continua, en UTN La Plata." },
     { when: "2025", phase: "post", title: "Icalsports", text: "Calendarios deportivos para más de 450 competiciones, con API propia." },
-    { when: "2026", phase: "report", title: "Mentor · Hackatón Cybertech Women", text: "5.º congreso, en representación de la UTN, con un equipo internacional." },
+    { when: "may 2026", phase: "report", title: "Mentor · Hackathon UTN-UNAD (Cybertech Women)", text: "5.º Congreso Internacional Cybertech Women UNAD 2026, en representación de la UTN, con un equipo internacional." },
     { when: "2026", phase: "exploit", title: "HTB Cap → root", text: "IDOR, credenciales en claro en un pcap y abuso de capabilities." },
     { when: "nov 2026", phase: "exploit", title: "HTB DoubleTake → root", text: "Cadena de dos CVEs: bypass de auth en sshd (musl) y escape de contenedor Docker al host." },
     { when: "2026", phase: "exploit", title: "Bug bounty: 10 reportes en menos de un mes", text: "Varios de severidad alta o crítica." },
-    { when: "ago 2026", phase: "exploit", title: "CyberWar · HackerTech 2026", text: "Framework multiagente de ataque y defensa para el CTF attack-defense de la UTN FRC." },
+    { when: "ago 2026", phase: "exploit", title: "CyberWar · HackerTech 2026", text: "4.º puesto por equipos en el CTF attack-defense de la UTN FRC, con un framework multiagente de ataque y defensa." },
     { when: "2026", phase: "report", title: "Ekoparty 2026 · presentación de morocho.ai", text: "Presentó el proyecto (pentest automatizado con IA) al Start-up Zone. La demo interactiva fue parte de esa presentación; no estuvo en ningún stand del evento." },
     { when: "nov 2026", phase: "recon", title: "Claude Academy · Claude 101", text: "Curso completado con credencial verificable." },
     { when: "nov 2026", phase: "recon", title: "Cuaderno de campo en Obsidian", text: "Las notas de máquinas, CVEs y conceptos se publican solas en este informe (Anexo B)." }
